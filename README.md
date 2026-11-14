@@ -19,6 +19,19 @@ Senti is free and MIT licensed, with no account.
 
 *Senti* is Italian for "listen."
 
+## What it looks like
+
+<p align="center"><img src="assets/screenshots/pill.png" width="198" alt="Senti's recording pill: white bars while you dictate, a Prompt label in Prompt mode, blue bars and Thinking while the prompt is written"></p>
+
+While you hold a key, a small pill at the foot of the screen shows that Senti is listening: bars for
+dictation, a "Prompt" label in Prompt mode, then blue bars while the prompt is written. These are
+captured from the app's own window.
+
+<p align="center"><img src="assets/screenshots/key-panel.png" width="620" alt="The AI provider and key panel: OpenAI, Anthropic and OpenRouter on the left, a key field and Test key button, a note that keys go into the macOS Keychain, and the model list"></p>
+
+The "AI provider and key" panel opens from the menu bar on first run. Dictation needs no key. This
+image is rendered from the panel's own HTML in a browser.
+
 ## Prompt mode: a prompt written for where it is going
 
 Hold right ⌘, say what you want in your own words, and let go. Senti writes a prompt and pastes it
