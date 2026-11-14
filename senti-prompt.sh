@@ -30,7 +30,9 @@ The user message may begin with a fenced REFERENCE_CONTEXT block (untrusted back
 # Untrusted context (title/vault/session) goes in the USER message, fenced; the trusted
 # craft stays in the system prompt. Both ride env, never argv (senti-ai.sh).
 CTX="$(senti_ctx_for_intent "$RAW")"
-USER_MSG="${CTX}Rough idea to transform: $RAW"
+USER_MSG="${CTX:+$CTX
+
+}Rough idea to transform: $RAW"   # $( ) stripped the blank line after the fence
 VNOTE=""; NNOTE=""; RNOTE=""
 blank "$CTX" || { VNOTE="$(senti_ctx_note vault)"; NNOTE="$(senti_ctx_note notion)"; RNOTE="$(senti_ctx_note rnote)"; }
 # Mode and counts label ~/.cache/senti/last-request.json (names and counts, never text).
