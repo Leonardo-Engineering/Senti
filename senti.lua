@@ -918,16 +918,16 @@ end
 -- The tap runs ONLY while Senti is recording or working, so every other app keeps Esc the
 -- rest of the time (Claude Code uses it to interrupt). On wf.* so GC cannot collect it.
 local ESC = 53
-function wf.cancelTurn()
+function wf.cancelTurn(quiet)
   if wf.state == "recording" then
     wf.held = nil
     wf.turn = (wf.turn or 0) + 1            -- nothing from this capture may paste later
     wf.pending = nil
     -- "cancel" stops sox and transcribes nothing; argv carries only the verb.
     hs.task.new(wf.BASH, function() wf.sweepCache() end, { wf.DICTATE, "cancel" }):start()
-    wf.log("esc: recording cancelled")
+    wf.log(quiet and "shortcut: recording cancelled (a key was pressed with the hold key down)" or "esc: recording cancelled")
     wf.setState("idle")
-    wf.hud.flash("Cancelled", 1)
+    if not quiet then wf.hud.flash("Cancelled", 1) end
   elseif wf.state == "working" then
     local back = wf.abandonTurn()
     wf.log("esc: working turn abandoned")
@@ -938,9 +938,19 @@ function wf.cancelTurn()
   end
 end
 if wf.escTap then wf.escTap:stop() end
+-- A key pressed while a hold-to-talk key is down makes the hold a shortcut (right Command+C,
+-- right Option+E for an accent, Fn+arrow), not dictation: cancel quietly and let the key through.
+-- Only early in the hold, so a stray key in the middle of a long dictation cannot throw it away.
+local SHORTCUT_WINDOW = 1.5
 wf.escTap = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, function(e)
   local ok, acted = pcall(function()
-    if e:getKeyCode() ~= ESC then return false end
+    if e:getKeyCode() ~= ESC then
+      if wf.state == "recording" and wf.held ~= nil and wf.heldAt
+         and hs.timer.secondsSinceEpoch() - wf.heldAt < SHORTCUT_WINDOW then
+        wf.cancelTurn(true)
+      end
+      return false                              -- never swallow a shortcut key
+    end
     if wf.state ~= "recording" and wf.state ~= "working" then return false end
     wf.cancelTurn()
     return true
@@ -2070,15 +2080,15 @@ function wf.armTap()
         wf.held = nil; wf.log("tap: key " .. code .. " up"); wf.endCapture()
       elseif code == wf.HOLD_VERBATIM then
         if flags.alt == true and wf.held == nil and wf.state == "idle" then
-          wf.held = code; wf.log("tap: right⌥ down"); wf.beginCapture("verbatim")
+          wf.held = code; wf.heldAt = hs.timer.secondsSinceEpoch(); wf.log("tap: right⌥ down"); wf.beginCapture("verbatim")
         end
       elseif code == wf.HOLD_PROMPT then
         if flags.cmd == true and wf.held == nil and wf.state == "idle" then
-          wf.held = code; wf.log("tap: right⌘ down"); wf.snapAndCapture("prompt")
+          wf.held = code; wf.heldAt = hs.timer.secondsSinceEpoch(); wf.log("tap: right⌘ down"); wf.snapAndCapture("prompt")
         end
       elseif code == wf.HOLD_COMMAND then
         if flags.fn == true and wf.held == nil and wf.state == "idle" then
-          wf.held = code; wf.log("tap: Fn down"); wf.beginCapture("command")
+          wf.held = code; wf.heldAt = hs.timer.secondsSinceEpoch(); wf.log("tap: Fn down"); wf.beginCapture("command")
         end
       end
     end)
