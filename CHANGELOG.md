@@ -75,6 +75,8 @@ All notable changes to Senti. Dates are in US Eastern time.
 - Holding right Command, right Option or Fn as part of a shortcut (right Command+C, right Option+E
   for an accent, Fn+arrow) no longer starts a dictation: a key pressed in the first 1.5 seconds of
   the hold cancels the recording quietly and the shortcut goes through.
+- On a heavy Prompt turn the rough idea now starts on its own line after the reference block (it was
+  glued onto the block's end marker).
 - A reply cut off at the token limit exits 17 instead of pasting half an answer.
 - A failed Keychain write no longer leaves an older key in place that would keep being used; `set`
   exits 1 and says nothing was saved.
