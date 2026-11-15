@@ -1131,9 +1131,10 @@ function wf.pasteLast()
   if not t then wf.notify("Nothing to paste again.\nSenti keeps the last result for 5 minutes.", 3); return end
   if wf.state ~= "idle" then return end
   wf.log("paste last: " .. #t .. " chars")
-  wf.deliver(t, { label = "paste last: pasted", again = true })
+  wf.deliver(t, { label = "paste last: pasted", again = true, modWait = 1.0 })
 end
 
+wf.PASTE_WARN = false   -- show a notice when a paste could not be confirmed (see wf.deliver)
 wf.txn = nil      -- the open paste: { saved, ours, timer, poll, late }
 local function settle(txn, why)
   if not txn or txn.done then return end
@@ -1190,8 +1191,11 @@ function wf.deliver(text, opts)
           if txn.done then return end
           local v2 = wf.pasteVerdict(before, wf.axCounts(), terminal)
           if v2 == "unchanged" then
-            wf.log("paste: FAILED (the field did not change)")
-            wf.notify("The text did not arrive in the field.\nPress ⌃⌥L to paste it again.", 6, wf.TONE.warn)
+            -- Log only by default. This verdict has been exercised on stubs and in Terminal
+            -- (which is excluded), not yet on a real native or web field, and a field that
+            -- reports stale counts would warn on every paste. wf.PASTE_WARN = true shows it.
+            wf.log("paste: not confirmed (the field did not change)")
+            if wf.PASTE_WARN then wf.notify("The text may not have arrived in the field.\nPress ⌃⌥L to paste it again.", 6, wf.TONE.warn) end
           else
             wf.log("paste: verified late")
           end
@@ -1207,7 +1211,7 @@ function wf.deliver(text, opts)
   wf.modWait = hs.timer.doEvery(0.02, function()
     waited = waited + 0.02
     local clear = not modsHeld()
-    if not clear and waited < 0.3 then return end
+    if not clear and waited < (opts.modWait or 0.3) then return end
     wf.modWait:stop(); wf.modWait = nil
     if clear and wf.state == "idle" and not (opts.checkFocus and wf.focusMoved()) then go(waited); return end
     -- Still held, a new recording started, or focus moved: do not send Cmd+V into that.
@@ -2123,12 +2127,15 @@ function wf.watchHold()
   if wf.holdPoll then wf.holdPoll:stop(); wf.holdPoll = nil end
   local flag = wf.held and HOLD_FLAG[wf.held]
   if not flag then return end
-  local misses = 0
+  local misses, seen = 0, false
   wf.holdPoll = hs.timer.doEvery(0.25, function()
     if wf.state ~= "recording" or wf.held == nil then wf.holdPoll:stop(); wf.holdPoll = nil; return end
     local ok, m = pcall(hs.eventtap.checkKeyboardModifiers)
     if not ok or type(m) ~= "table" then return end
-    if m[flag] then misses = 0; return end
+    if m[flag] then seen = true; misses = 0; return end
+    -- Fail safe: if this Mac never reports the key as down (Fn on some keyboards, or under
+    -- secure input), the watch has no evidence and must not end anything.
+    if not seen then return end
     misses = misses + 1
     if misses < 2 then return end              -- two readings in a row, so a flicker cannot end a take
     wf.holdPoll:stop(); wf.holdPoll = nil
@@ -2191,6 +2198,10 @@ function wf.beginCapture(m)
   -- The probe is async. If a hold key started this and is released before the probe
   -- answers, recording now would start a capture no key can end — so don't.
   local heldAtStart = wf.held
+  if wf.recorderStarted then      -- cannot happen today (same test as earlyStart); never leave a recorder behind
+    wf.recorderStarted = nil
+    hs.task.new(wf.BASH, nil, {wf.DICTATE, "cancel"}):start()
+  end
   hs.task.new(wf.AUTH, function(_, out)
     out = (out or ""):gsub("%s+","")
     wf.log("mic probe: "..out)
