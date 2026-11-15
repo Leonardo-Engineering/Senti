@@ -295,6 +295,10 @@ clean_text() {
     my $rf = shift; local $/; my $t = <STDIN>; $t = "" unless defined $t;
     $t =~ s/\n/ /g; $t =~ s/^\s+//; $t =~ s/\s+$//; $t =~ s/\s+/ /g;
     exit 0 if $t =~ /^((\[[^\]]*\]|\([^)]*\)|\*[^*]*\*)\s*)+$/;
+    # Whisper tags non-speech sounds: drop them at the start, and bracketed or starred ones at
+    # the end. A closing (parenthesis) is left alone: that can be an aside by the speaker.
+    $t =~ s/^(?:(?:\[[^\]]*\]|\([^)]*\)|\*[^*]*\*)\s*)+//;
+    $t =~ s/(?:\s*(?:\[[^\]]*\]|\*[^*]*\*))+$//;
     if ($ENV{FILLERS} eq "1") {
       my @w = split / /, $t; my $n = scalar @w; my $out = "";
       for my $i (0 .. $#w) {
@@ -316,7 +320,7 @@ clean_text() {
         my ($p, $r) = split(/\|/, $_, 2); s/^\s+|\s+$//g for $p, $r;
         next if $p eq "";   # an empty pattern re-uses the last match in perl
         push @rules, [$p, $r]; }
-      for my $ru (@rules) { my ($p, $r) = @$ru; $t =~ s/(?<![[:alnum:]])\Q$p\E(?![[:alnum:]])/$r/gi; }
+      for my $ru (@rules) { my ($p, $r) = @$ru; $t =~ s/(?<![[:alnum:]-])\Q$p\E(?![[:alnum:]-])/$r/gi; }   # "-" is part of a word: no rule fires inside "centi-meter"
     }
     print $t;' "$WF_REPLACEMENTS"
 }

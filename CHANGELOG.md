@@ -72,6 +72,12 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- Fn with nothing selected no longer waits 0.8 seconds: Senti asks Accessibility what is selected and only
+  falls back to copying when the app cannot say. Your clipboard is left alone in that case.
+- After a tab switch in the same window, a prompt uses that tab's context, and a result is not pasted into
+  a tab you switched to while it was being written.
+- Sound tags such as "(laughs)" at the start of a dictation are dropped, and a dictionary rule no longer
+  fires inside a hyphenated word.
 - Words are no longer lost when a screenshot goes missing (Prompt falls back to text, Context hands your
   words back), when the answer comes back empty, when a slow model outlasts the watchdog, or when a
   cancel overlaps the next recording. The answer is no longer cut short when it mentions its own tags.

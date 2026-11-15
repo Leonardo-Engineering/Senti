@@ -40,10 +40,17 @@ blank() { case "$1" in *[![:space:]]*) return 1 ;; *) return 0 ;; esac; }
 #
 # Keyed on the window id, so a prefetch for one terminal can never be served to
 # another. No window id → no caching at all (correctness over speed).
+# Also keyed on the title's first field (the project) and the app: a window id alone served the
+# previous tab's context for up to a minute after a cancelled turn and a tab switch (15 Nov
+# 2026). Only the first field: the rest of a terminal title animates between key-down and key-up.
+# cksum reads the text on stdin, so the title never touches a command line.
 ctx_file() {   # ctx_file <craft|untrusted> → path, or nothing when caching is unsafe
   [ -n "${SENTI_SKEY:-}" ] || return 0
-  printf '%s/ctx-%s-%s' "${WF_RUN:-$HOME/.cache/senti}" "$1" \
-    "$(printf '%s' "${SENTI_SKEY:-}" | /usr/bin/tr -cd '[:alnum:]._-' | cut -c1-32)"
+  local head="${SENTI_SLABEL:-}" sum
+  head="${head%% — *}"
+  sum="$(printf '%s|%s' "$head" "${SENTI_HINT:-}" | /usr/bin/cksum)"; sum="${sum%% *}"
+  printf '%s/ctx-%s-%s-%s' "${WF_RUN:-$HOME/.cache/senti}" "$1" \
+    "$(printf '%s' "${SENTI_SKEY:-}" | /usr/bin/tr -cd '[:alnum:]._-' | cut -c1-32)" "$sum"
 }
 
 # Print a fresh cache entry and succeed; fail if absent, stale, or unkeyed. An EMPTY
