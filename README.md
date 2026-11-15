@@ -66,7 +66,7 @@ brief.
 |---|---|---|
 | Hold **right ⌥** | **Dictate** | Types exactly what you say. Fully local. |
 | Hold **right ⌘** | **Prompt** | Turns a rough spoken idea into a prompt for the model you are about to paste into. Adds a screenshot when that setting is on and Hammerspoon has Screen Recording permission; otherwise text only. |
-| Hold **Fn** | **Command** | Transforms the text you selected by voice ("make this a bullet list", "fix the grammar"). Sends your words and the selection. With no selection, it writes at the cursor. |
+| Hold **Fn** | **Command** | Transforms the text you selected by voice ("make this a bullet list", "fix the grammar"). Sends your words and the selection. With no selection there is nothing to edit, so it writes a prompt from what you said, exactly as right ⌘ does. |
 | **⌃⌥V** | **Context** | Takes a screenshot plus your instruction, then drafts a reply, edit or answer at the cursor. |
 | `⌃⌥D` / `⌃⌥P` / `⌃⌥C` | Toggles | Hands-free versions of Dictate, Prompt and Command. |
 

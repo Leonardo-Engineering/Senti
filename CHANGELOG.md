@@ -72,6 +72,9 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- Holding Fn with nothing selected now writes a prompt the way right Command does (focused window,
+  destination model, memory). It used to go to a writing assistant that saw no context, and its output
+  could read as off topic.
 - Prompt and Context now capture the window you are working in, not the whole display. With several
   windows on screen the prompt could come back about a different window than the one with the cursor.
 - Holding right Command, right Option or Fn as part of a shortcut (right Command+C, right Option+E

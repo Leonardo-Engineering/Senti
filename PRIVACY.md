@@ -15,7 +15,7 @@ describes the code in this repository as of 14 November 2026.
 | **Prompt** (hold right ⌘) | Your words. Senti's own instructions (from `prompts/`), including guidance for the model you are about to paste into, which names that model. A downscaled screenshot when **Use a screenshot in Prompt** is on (the default) and Hammerspoon has Screen Recording permission. | your provider |
 | **Prompt, heavy turn** | Everything above, plus fenced blocks of context: the project and task from the window title, this window's recent Senti turns, and your notes digests if notes are on. See the next section. | your provider |
 | **Prompt, heavy turn, Notion on** | A read of the Notion page you mapped to this project. The request carries the page id and your Notion token, nothing from your speech, screen or window title. | `api.notion.com` |
-| **Command** (hold Fn) | Your words and the text you selected, if any. No screenshot. | your provider |
+| **Command** (hold Fn) | With text selected: your words and that text, no screenshot. With nothing selected it works as Prompt mode and sends what Prompt mode sends. | your provider |
 | **Context** (⌃⌥V) | Your words and a downscaled screenshot. Context always takes one, because reading the screen is what it is for. | your provider |
 
 "Your provider" is the one host of the provider you picked: `api.openai.com`, `api.anthropic.com`
