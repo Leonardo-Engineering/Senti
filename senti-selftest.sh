@@ -970,6 +970,11 @@ else
   fi
 fi
 
+echo "── one model choice drives text and screenshots ──"
+PV="$(WF_TEXT_MODEL=claude-haiku-5-5 bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-key.sh"; senti_ai_resolve vision; printf "%s %s" "$SENTI_R_PROVIDER" "$SENTI_R_MODEL"' 2>/dev/null)"
+[ "$PV" = "anthropic claude-haiku-5-5" ] && ok "a pinned text model is used for screenshots too (no other provider)" || bad "pinned text model, screenshot path resolved to: $PV"
+NOVIS="$(/usr/bin/python3 -I -c 'import json,sys; print(" ".join(m["id"] for m in json.load(open(sys.argv[1]))["models"] if not m.get("vision")))' "$CFG/ai-models.json" 2>/dev/null)"
+[ -z "$NOVIS" ] && ok "every listed model reads screenshots, so the picker changes Prompt mode too" || bad "models the picker cannot use for screenshots: $NOVIS"
 echo "── config upgrade keeps user settings ──"
 CFGT="$SRC/senti-config.sh"; [ -f "$CFGT" ] || CFGT="$CFG/senti-config.sh"
 CT="$(mktemp -d)"
