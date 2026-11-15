@@ -2272,6 +2272,45 @@ function wf.snapAndCapture(mode)
   wf.beginCapture(mode)
 end
 
+-- ── Spoken language ────────────────────────────────────────────────────
+-- Sent with every transcription request, so a change needs no model reload unless the Fast
+-- (English only) model was in use. Any other Whisper code works through WF_LANG in
+-- config.local.sh, which also overrides this menu.
+wf.LANGS = { { "en", "English" }, { "auto", "Detect automatically" }, { "es", "Spanish" }, { "fr", "French" },
+             { "de", "German" }, { "pt", "Portuguese" }, { "it", "Italian" }, { "nl", "Dutch" }, { "pl", "Polish" },
+             { "tr", "Turkish" }, { "ru", "Russian" }, { "ar", "Arabic" }, { "hi", "Hindi" }, { "ja", "Japanese" },
+             { "ko", "Korean" }, { "zh", "Chinese" } }
+function wf.langName(code)
+  for _, l in ipairs(wf.LANGS) do if l[1] == code then return l[2] end end
+  return tostring(code)
+end
+function wf.setLang(code)
+  hs.task.new(wf.BASH, function(rc, out)
+    local now = (out or ""):gsub("%s+", "")
+    if rc ~= 0 or now == "" then wf.notify("Could not change the language.", 4, wf.TONE.warn); return end
+    wf.log("language: " .. now)
+    if now ~= code then
+      wf.notify("Language stays " .. wf.langName(now) .. ":\nWF_LANG is set in config.local.sh.", 6, wf.TONE.warn)
+    elseif code == "auto" then
+      wf.notify("Senti now detects the language.\nThis adds about 0.7 s to each dictation.", 5, wf.TONE.ok)
+    else
+      wf.notify("Dictation language: " .. wf.langName(code), 3, wf.TONE.ok)
+    end
+  end, { wf.MODELSH, "lang", code }):start()
+end
+function wf.langMenu(cur)
+  local m, listed = {}, false
+  for _, l in ipairs(wf.LANGS) do
+    if l[1] == cur then listed = true end
+    m[#m + 1] = { title = (l[1] == cur and "✓ " or "   ") .. l[2] .. (l[1] == "auto" and " (about 0.7 s slower)" or ""), fn = function() wf.setLang(l[1]) end }
+    if l[1] == "auto" then m[#m + 1] = { title = "-" } end
+  end
+  if not listed then table.insert(m, 1, { title = "✓ " .. cur .. " (from config.local.sh)", disabled = true }) end
+  m[#m + 1] = { title = "-" }
+  m[#m + 1] = { title = "Other languages: WF_LANG in config.local.sh", disabled = true }
+  return m
+end
+
 -- ── Menu bar ───────────────────────────────────────────────────────────
 -- The AI submenu: what Senti writes with, what it writes for, and the picker. Built from
 -- the cached status and registry, so opening the menu spawns nothing for keys.
@@ -2336,6 +2375,8 @@ local function menu()
   local serverUp = hs.execute(wf.BASH .. " '" .. wf.DICTATE .. "' server"):gsub("%s+","") == "up"
   local tapOn = wf.flagWatcher and wf.flagWatcher:isEnabled()
   local curModel = hs.execute(wf.BASH .. " '" .. wf.MODELSH .. "' current"):gsub("%s+","")
+  local curLang = hs.execute(wf.BASH .. " '" .. wf.MODELSH .. "' lang current"):gsub("%s+","")
+  if curLang == "" then curLang = "en" end
   return {
     { title = "Senti: local dictation", disabled = true },
     { title = serverUp and "● engine: running" or "○ engine: STOPPED", disabled = true },
@@ -2346,7 +2387,7 @@ local function menu()
     { title = "Esc cancels while the pill is showing", disabled = true },
     { title = "-" },
     { title = "Speed", menu = {
-        { title = (curModel == "fast" and "✓ " or "   ") .. "Fast (base.en, ~0.3s)", fn = function()
+        { title = (curModel == "fast" and "✓ " or "   ") .. (curLang == "en" and "Fast (base.en, ~0.3s)" or "Fast (English only, not used for " .. wf.langName(curLang) .. ")"), fn = function()
             wf.notify("Switching to Fast model…")
             hs.task.new(wf.BASH, function() wf.notify("Fast mode on", 2) end, {wf.MODELSH, "fast"}):start()
           end },
@@ -2355,6 +2396,7 @@ local function menu()
             hs.task.new(wf.BASH, function() wf.notify("Accurate mode on", 2) end, {wf.MODELSH, "accurate"}):start()
           end },
       } },
+    { title = "Language: " .. wf.langName(curLang), menu = wf.langMenu(curLang) },
     { title = "-" },
     { title = "AI provider and key…", fn = function() wf.openPanel() end },
     { title = "AI", menu = aiMenu() },

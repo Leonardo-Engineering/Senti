@@ -245,7 +245,9 @@ EOF
   fi
 
   local raw rc args
-  args=(-F file=@"$WF_AUDIO" -F temperature=0.0 -F response_format=text)
+  # The language rides each request (the server's own --language is only its default), so the
+  # menu can change it without reloading the model.
+  args=(-F file=@"$WF_AUDIO" -F temperature=0.0 -F response_format=text -F language="${WF_LANG:-en}")
   [ -n "$ctx_arg" ] && args+=(-F audio_ctx="$ctx_arg")
   # The hint goes in from a file (-F name=<file sends the content as the field value,
   # unparsed, so ';' in a branch name is safe): on argv, its window-title text was
@@ -294,7 +296,11 @@ EOF
 #   4. the custom dictionary: literal, case-insensitive, whole-word phrase fixes from
 #      replacements.txt (whole words: "centi|Senti" was turning incentive into inSentive).
 clean_text() {
-  printf '%s' "$1" | FILLERS="${WF_REMOVE_FILLERS:-1}" /usr/bin/perl -e '
+  # FILLERS: 1 = English rules; 2 = any other language or auto-detect, where "um" is a word
+  # (German, Portuguese) and so/ok/well/like are not openers; 0 = off.
+  local fl="${WF_REMOVE_FILLERS:-1}"
+  [ "$fl" = "1" ] && [ "${WF_LANG:-en}" != "en" ] && fl=2
+  printf '%s' "$1" | FILLERS="$fl" /usr/bin/perl -e '
     my $rf = shift; local $/; my $t = <STDIN>; $t = "" unless defined $t;
     $t =~ s/\n/ /g; $t =~ s/^\s+//; $t =~ s/\s+$//; $t =~ s/\s+/ /g;
     exit 0 if $t =~ /^((\[[^\]]*\]|\([^)]*\)|\*[^*]*\*)\s*)+$/;
@@ -302,16 +308,17 @@ clean_text() {
     # the end. A closing (parenthesis) is left alone: that can be an aside by the speaker.
     $t =~ s/^(?:(?:\[[^\]]*\]|\([^)]*\)|\*[^*]*\*)\s*)+//;
     $t =~ s/(?:\s*(?:\[[^\]]*\]|\*[^*]*\*))+$//;
-    if ($ENV{FILLERS} eq "1") {
+    if ($ENV{FILLERS} eq "1" || $ENV{FILLERS} eq "2") {
+      my $en = $ENV{FILLERS} eq "1";
       my @w = split / /, $t; my $n = scalar @w; my $out = "";
       for my $i (0 .. $#w) {
         my $tok = $w[$i]; my $base = lc $tok; my $p = "";
         $p = $1 if $base =~ /([.,!?;:]+)$/; $base =~ s/[.,!?;:]+$//;
-        if ($base =~ /^(um+|uh+|uhm+|erm+|hmm+)$/) {
+        if ($en ? $base =~ /^(um+|uh+|uhm+|erm+|hmm+)$/ : $base =~ /^(uh+|uhm+|erm+|hmm+)$/) {
           if ($p =~ /\./ && $out ne "" && $out !~ /[.!?]$/) { $out =~ s/[,;:]+$//; $out .= "."; }
           next;
         }
-        next if $i == 0 && $n > 2 && $p eq "," && $base =~ /^(so|okay|ok|well|like)$/;
+        next if $en && $i == 0 && $n > 2 && $p eq "," && $base =~ /^(so|okay|ok|well|like)$/;
         $out = $out eq "" ? $tok : "$out $tok";
       }
       $out = uc(substr($out, 0, 1)) . substr($out, 1) if length $out;

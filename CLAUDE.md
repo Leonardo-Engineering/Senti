@@ -130,6 +130,12 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 - **Engine:** `whisper-cpp` (brew) kept warm in Metal by launchd `io.senti.server`
   (`senti-serve.sh`). base.en (Fast ~0.2s) / large-v3-turbo-q5 (Accurate). Model choice
   in `~/.cache/senti/model.pref` via `senti-model.sh`.
+- **Language:** `WF_LANG` resolves env / `config.local.sh` → `~/.cache/senti/lang.pref` (menu, via
+  `senti-model.sh lang <code|auto>`, read with `read`, never sourced, validated) → `en`. It rides EACH
+  `/inference` request as `language=`, so a switch reloads nothing; measured 15 Nov 2026 on the turbo
+  model: `es` 840 ms, `auto` 1,590 ms (a detection pass), same clip. base.en is English only, so config.sh
+  resolves the model to Accurate for any other language. `clean_text` uses its English filler rules only
+  for `en` ("um" is a word in German and Portuguese); the heavy-turn trigger stays English.
 - **Recording:** `sox -d` → 16 kHz mono WAV, stopped with **SIGINT** (finalizes the header).
   `start` spawns sox first and sweeps orphans afterwards, detached (the sweep used to delay
   the start of recording by 0.15 s). `audio_ctx=768` applies below 14 s (768 frames of 20 ms
