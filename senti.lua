@@ -1686,6 +1686,7 @@ end
 
 -- Run the vision engine; surface failures instead of silently inserting nothing.
 function wf.runVision(raw, kind, turn)
+  wf.aiStarting()
   wf.hud.show("thinking")
   -- Target hint + session identity ride the env via runScript; argv carries only paths/kind.
   local task
@@ -1695,6 +1696,7 @@ function wf.runVision(raw, kind, turn)
     if wf.staleTurn(turn) then return end
     wf.pending = nil
     wf.setState("idle")
+    if exitCode == 0 and not (out or ""):find("%S") then exitCode = 17 end   -- an empty answer is not a result
     if exitCode ~= 0 then
       -- Don't throw the user's words away with the failed request.
       wf.log("vision failed (exit " .. tostring(exitCode) .. ") — words left on the clipboard")
@@ -1711,6 +1713,13 @@ end
 -- A result belongs to the turn that started it. The 'working' watchdog abandons a turn
 -- by bumping wf.turn, and its late callback must then do nothing: no paste into whatever
 -- app is focused now, and no setState that would wreck a newer recording.
+-- The 75 s 'working' watchdog started when transcription began. A long dictation plus a slow
+-- model could be abandoned while the request was still inside its own budget, dropping an answer
+-- that was on its way. Restart the clock when the AI call starts.
+function wf.aiStarting()
+  if wf.state == "working" then wf.setState("working") end
+end
+
 function wf.staleTurn(turn)
   if turn ~= nil and turn ~= wf.turn then
     wf.log("dropped a late result from an abandoned turn")
@@ -1827,6 +1836,7 @@ function wf.runAIMode(raw, turn)
     wf.runCommand(raw, turn)           -- raw = the spoken instruction
   elseif wf.mode == "prompt" then
     local function textPath()                    -- no screen → text-only prompt path
+      wf.aiStarting()
       wf.hud.show("thinking")
       local task
       task = wf.runScript({wf.PROMPTS}, raw, function(exitCode, stdout)

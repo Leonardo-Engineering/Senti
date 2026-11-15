@@ -20,7 +20,9 @@ RAW="${SENTI_IN:-}"
 export SENTI_HINT="${SENTI_HINT:-${2:-}}"
 blank "$RAW" && exit 0
 AI="$HOME/.config/senti/senti-ai.sh"
-extract_r(){ /usr/bin/perl -0777 -ne 'print $1 if /<r>(.*?)<\/r>/s'; }
+# One <r>: everything up to the LAST </r> (an answer may mention </r>). Several: the last span
+# (a model that echoes the example from its instructions puts the real answer after it).
+extract_r(){ /usr/bin/perl -0777 -ne 'my @o = /<r>/g; if (@o == 1) { print $1 if /<r>(.*)<\/r>/s } else { my @m = /<r>(.*?)<\/r>/sg; print $m[-1] if @m }'; }
 trim(){ /usr/bin/perl -0777 -pe 's/^\s+//; s/\s+$//'; }
 
 GEN_SYS="You are a world-class prompt engineer. Turn the rough, spoken-aloud request into ONE clean, high-signal prompt for a capable LLM. First silently deconstruct the intent, then build it.$(senti_prompt_craft)

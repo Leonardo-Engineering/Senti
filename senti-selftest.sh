@@ -975,6 +975,12 @@ PV="$(WF_TEXT_MODEL=claude-haiku-5-5 bash -c 'source "$HOME/.config/senti/config
 [ "$PV" = "anthropic claude-haiku-5-5" ] && ok "a pinned text model is used for screenshots too (no other provider)" || bad "pinned text model, screenshot path resolved to: $PV"
 NOVIS="$(/usr/bin/python3 -I -c 'import json,sys; print(" ".join(m["id"] for m in json.load(open(sys.argv[1]))["models"] if not m.get("vision")))' "$CFG/ai-models.json" 2>/dev/null)"
 [ -z "$NOVIS" ] && ok "every listed model reads screenshots, so the picker changes Prompt mode too" || bad "models the picker cannot use for screenshots: $NOVIS"
+echo "── no lost words ──"
+XR="$(bash -c 'eval "$(/usr/bin/grep "^extract_r()" "$1")"; printf "%s" "Example: <r>your result here</r> <r>REAL</r>" | extract_r; printf "|"; printf "%s" "<r>keep </r> inside</r>" | extract_r' _ "$CFG/senti-prompt.sh" 2>/dev/null)"
+[ "$XR" = "REAL|keep </r> inside" ] && ok "answer extraction takes the real answer, not an echoed example, and is not cut at an inner tag" || bad "answer extraction returned: $XR"
+SENTI_IN="reply yes" bash "$CFG/senti-vision.sh" "" "$HOME/.cache/senti/no-such-shot.png" context "" >/dev/null 2>&1; VRC=$?
+[ "$VRC" != "0" ] && ok "Context without a screenshot fails (exit $VRC), so the words are handed back" || bad "Context without a screenshot exited 0 with nothing: the words were lost"
+/usr/bin/grep -q 'is_recording || rm -f "\$WF_AUDIO"' "$CFG/senti-dictate.sh" && ok "a slow cancel cannot delete the next recording's audio" || bad "cancel removes the audio file even while a new recording runs"
 echo "── config upgrade keeps user settings ──"
 CFGT="$SRC/senti-config.sh"; [ -f "$CFGT" ] || CFGT="$CFG/senti-config.sh"
 CT="$(mktemp -d)"
