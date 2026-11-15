@@ -72,6 +72,8 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- Prompt and Context now capture the window you are working in, not the whole display. With several
+  windows on screen the prompt could come back about a different window than the one with the cursor.
 - Holding right Command, right Option or Fn as part of a shortcut (right Command+C, right Option+E
   for an accent, Fn+arrow) no longer starts a dictation: a key pressed in the first 1.5 seconds of
   the hold cancels the recording quietly and the shortcut goes through.
