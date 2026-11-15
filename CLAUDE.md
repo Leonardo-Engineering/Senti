@@ -292,9 +292,14 @@ hostile input, not a remote attacker. Verified defenses — don't regress them:
   fixed string and every logged provider message is scrubbed of key-shaped text.
 - **Verbatim stays local:** verbatim turns are never written to session memory, because
   recall rides prompt-mode API calls. Pasted text is marked transient + concealed so clipboard
-  managers skip it. Universal Clipboard (Handoff) can still sync it to your other devices.
-  macOS does have a public opt-out (`NSPasteboard` current-host-only writes, reachable from a
-  small Swift helper); Senti does not use it yet.
+  managers skip it, and written current-host-only (`wf.writeHostOnly`: JXA in-process via
+  `hs.osascript.javascript`, text handed over on a private named pasteboard, about 20 ms warm and
+  90 ms cold, so it is warmed at load) so Universal Clipboard does not sync it; the marked write is
+  the fallback. Checked on this Mac 15 Nov 2026 (write, read-back, marks); NOT confirmed with a
+  second device.
+- **Secure input** (a password field, Terminal's Secure Keyboard Entry) hides key-down events from
+  Senti: hold-to-talk still works (modifier flags are delivered) but Esc cancel and the
+  shortcut-cancel cannot. `wf.diag()` reports `secure-input=`; the menu says so.
 - **Notion and retrieval:** both run only on heavy turns after transcription (never in the key-down
   prefetch), each in its own nonce fence, each logged as `sent:` and named in `last-request.json`
   (`parts()` reads every fence). The Notion token never leaves `api.notion.com`; the retrieval query

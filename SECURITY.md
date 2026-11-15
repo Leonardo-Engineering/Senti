@@ -105,8 +105,9 @@ Each line names the code that does it, so you can check it.
   load a bad model and exit. launchd restarts it. This is a denial of service: it cannot read your
   audio.
 - **Universal Clipboard.** Senti types by pasting. The pasted text is marked transient and concealed,
-  which clipboard managers that follow that convention skip, but macOS Universal Clipboard (Handoff)
-  can still sync it to your other devices.
+  which clipboard managers that follow that convention skip, and written for this Mac only (the macOS
+  option that keeps an item off Universal Clipboard). If that write fails Senti falls back to the marks
+  alone, and Universal Clipboard can then sync the text. Not yet confirmed with a second device.
 - **A full screenshot if scaling fails.** If `sips` cannot shrink the screenshot, the original PNG is
   sent instead (`senti-vision.sh`).
 - **The optional Fast model download has no checksum.** The `curl` line in the README for

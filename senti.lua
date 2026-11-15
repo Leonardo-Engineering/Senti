@@ -1008,10 +1008,33 @@ function wf.setState(s)
 end
 
 -- ── Insert text into whatever app is focused (clipboard paste) ──────────
--- Put text on the clipboard marked transient + concealed (the nspasteboard.org
--- convention) so clipboard managers and Universal Clipboard don't keep transcripts.
--- Plain setContents if that fails. Every place Senti hands words back uses this.
+-- Put text on the clipboard marked transient + concealed (the nspasteboard.org convention),
+-- so clipboard managers skip it, and written "current host only", so Universal Clipboard does
+-- not send dictated text to the user's other devices. hs.pasteboard cannot set that option, so
+-- the write goes through JXA in-process (about 20 ms, measured 15 Nov 2026): the text is handed
+-- over on a private named pasteboard, never inside the script source. If that fails, the plain
+-- marked write is used (the marks alone do not stop Universal Clipboard).
+local HOST_ONLY_JXA = [[ObjC.import('AppKit');
+var src = $.NSPasteboard.pasteboardWithName('io.senti.handoff');
+var dst = $.NSPasteboard.generalPasteboard;
+var s = src.stringForType('public.utf8-plain-text');
+dst.prepareForNewContentsWithOptions($.NSPasteboardContentsCurrentHostOnly);
+var ok = dst.setStringForType(s, 'public.utf8-plain-text');
+dst.setDataForType($.NSData.data, 'org.nspasteboard.TransientType');
+dst.setDataForType($.NSData.data, 'org.nspasteboard.ConcealedType');
+src.clearContents;
+'' + ok;]]
+function wf.writeHostOnly(text)
+  local ok, done = pcall(function()
+    if not hs.pasteboard.writeAllData("io.senti.handoff", { ["public.utf8-plain-text"] = text }) then return false end
+    local good, res = hs.osascript.javascript(HOST_ONLY_JXA)
+    pcall(hs.pasteboard.deletePasteboard, "io.senti.handoff")
+    return good == true and tostring(res) == "true" and hs.pasteboard.getContents() == text
+  end)
+  return ok and done == true
+end
 function wf.setPrivateClipboard(text)
+  if wf.writeHostOnly(text) then return end
   local ok, wrote = pcall(hs.pasteboard.writeAllData, {
     ["public.utf8-plain-text"] = text,
     ["org.nspasteboard.TransientType"] = "",
@@ -2090,6 +2113,28 @@ function wf.record()
   if wf.recorderStarted then wf.recorderStarted = nil                 -- earlyStart already did it
   else wf.keyDownAt = wf.recStartedAt; hs.task.new(wf.BASH, nil, {wf.DICTATE, "start"}):start() end
   wf.firstAudioLogged = nil
+  wf.watchHold()
+end
+
+-- A key-up the event tap never delivered left the recording running until the 150 s watchdog.
+-- While a hold key is down, check 4 times a second that it still is.
+local HOLD_FLAG = { [61] = "alt", [54] = "cmd", [63] = "fn" }
+function wf.watchHold()
+  if wf.holdPoll then wf.holdPoll:stop(); wf.holdPoll = nil end
+  local flag = wf.held and HOLD_FLAG[wf.held]
+  if not flag then return end
+  local misses = 0
+  wf.holdPoll = hs.timer.doEvery(0.25, function()
+    if wf.state ~= "recording" or wf.held == nil then wf.holdPoll:stop(); wf.holdPoll = nil; return end
+    local ok, m = pcall(hs.eventtap.checkKeyboardModifiers)
+    if not ok or type(m) ~= "table" then return end
+    if m[flag] then misses = 0; return end
+    misses = misses + 1
+    if misses < 2 then return end              -- two readings in a row, so a flicker cannot end a take
+    wf.holdPoll:stop(); wf.holdPoll = nil
+    wf.log("hold: key " .. tostring(wf.held) .. " is up but no key-up arrived; ending the recording")
+    wf.held = nil; wf.endCapture()
+  end)
 end
 
 -- Prompt for / open the mic permission. `andThenRecord` = record once granted.
@@ -2328,6 +2373,12 @@ local function menu()
         hs.execute("/usr/bin/open 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'")
       end },
     (function()
+      if not wf.secureInput() then return { title = "Esc cancels a recording", disabled = true } end
+      return { title = "Secure input is on: Esc cannot cancel here", fn = function()
+        wf.notify("An app has secure keyboard entry on (a password field, or Terminal's\nSecure Keyboard Entry). Holding a key still dictates, but Esc cannot cancel.", 7)
+      end }
+    end)(),
+    (function()
       local n = wf.lastLength()
       if n == 0 then return { title = "Paste last result (nothing kept)", disabled = true } end
       return { title = "Paste last result (" .. n .. " characters)  ⌃⌥L", fn = function() wf.pasteLast() end }
@@ -2452,15 +2503,24 @@ end)
 -- Returns the state string. Callable via `hs -c 'return wf.diag()'` only when the
 -- ipc opt-in above is enabled; otherwise reach it through wf.diagToLog() (menu item
 -- + startup), which needs no open port.
+-- Secure input (a password field, or Terminal's "Secure Keyboard Entry") hides ordinary key
+-- presses from every other app. Hold-to-talk still works, because modifier keys are still
+-- reported, but Esc cannot cancel and a shortcut cannot be told from dictation while it is on.
+function wf.secureInput()
+  local ok, on = pcall(hs.eventtap.isSecureInputEnabled)
+  return ok and on == true
+end
+
 function wf.diag()
   return string.format(
-    "state=%s | tap=%s | accessibility=%s | hotkeys=%d | server=%s | ipc=%s",
+    "state=%s | tap=%s | accessibility=%s | hotkeys=%d | server=%s | ipc=%s | secure-input=%s",
     wf.state,
     wf.flagWatcher and tostring(wf.flagWatcher:isEnabled()) or "nil",
     tostring(hs.accessibilityState()),
     #hs.hotkey.getHotkeys(),
     hs.execute(wf.BASH.." '"..wf.DICTATE.."' server"):gsub("%s+",""),
-    io.open(wf.HOME .. "/.cache/senti/allow-ipc") and "ON(dev)" or "off")
+    io.open(wf.HOME .. "/.cache/senti/allow-ipc") and "ON(dev)" or "off",
+    tostring(wf.secureInput()))
 end
 function wf.diagToLog() wf.log("diag: " .. wf.diag()) end
 
@@ -3092,6 +3152,8 @@ wf.refreshKeys(function(st)
   wf.firstRunTimer = hs.timer.doAfter(1.5, function() wf.firstRunTimer = nil; wf.openPanel() end)
 end)
 wf.log("=== init.lua loaded ===")
+-- Warm the JXA bridge (the first call costs about 90 ms, later ones about 20) off the paste path.
+wf.jxaWarm = hs.timer.doAfter(5, function() pcall(hs.osascript.javascript, "1") end)
 -- Say it once per launch, after the "ready" toast has cleared. On wf.* so GC keeps the timer.
 wf.clashTimer = hs.timer.doAfter(8, function()
   local rival = wf.keyClash()

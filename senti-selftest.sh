@@ -1021,6 +1021,9 @@ if [ "$CI" = 1 ]; then
     && ok "pastes go through one checked transaction that reads counts, never the field's text" || bad "senti.lua lacks the paste transaction, or reads a field's text"
   [ "$(/usr/bin/grep -c 'hs.eventtap.keyStroke({"cmd"}, "v"' "$SRC/senti.lua")" = "1" ] \
     && ok "Cmd+V is sent from exactly one place (wf.paste)" || bad "Cmd+V is sent from more than one place: a paste can skip the checks"
+  /usr/bin/grep -q 'NSPasteboardContentsCurrentHostOnly' "$SRC/senti.lua" && /usr/bin/grep -q 'if wf.writeHostOnly(text) then return end' "$SRC/senti.lua" \
+    && ok "dictated text is written to the clipboard for this Mac only (kept off Universal Clipboard)" || bad "the clipboard write is not current-host-only"
+  /usr/bin/grep -q 'function wf.watchHold' "$SRC/senti.lua" && ok "a lost key-up ends the recording (the hold key is checked while recording)" || bad "no hold-key watch: a lost key-up records until the 150 s watchdog"
   /usr/bin/grep -q 'function wf.earlyStart' "$SRC/senti.lua" && /usr/bin/grep -q 'first audio block %d ms after key-down' "$SRC/senti.lua" \
     && ok "senti.lua starts the recorder first at key-down and logs the time to first audio" || bad "senti.lua lacks the early recorder start or the first-audio log"
 fi

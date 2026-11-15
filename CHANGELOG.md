@@ -47,6 +47,11 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Changed
 
+- Dictated text is written to the clipboard for this Mac only, so Universal Clipboard should not send it
+  to your other devices (not yet confirmed with a second device).
+- A key-up that macOS never delivers now ends the recording within half a second, not after 150 seconds.
+- The menu and the diagnostics line say when secure input is on (a password field, or Terminal's Secure
+  Keyboard Entry): holding a key still dictates there, but Esc cannot cancel.
 - The recorder now starts first at key-down, before anything else, so less of your first word is missed.
   Senti keeps recording for 100 ms after you let go (`WF_TAIL_MS`, 0 turns it off; a brushed key gets
   none), and logs how long after key-down the first audio arrived.
