@@ -975,6 +975,9 @@ PV="$(WF_TEXT_MODEL=claude-haiku-5-5 bash -c 'source "$HOME/.config/senti/config
 [ "$PV" = "anthropic claude-haiku-5-5" ] && ok "a pinned text model is used for screenshots too (no other provider)" || bad "pinned text model, screenshot path resolved to: $PV"
 NOVIS="$(/usr/bin/python3 -I -c 'import json,sys; print(" ".join(m["id"] for m in json.load(open(sys.argv[1]))["models"] if not m.get("vision")))' "$CFG/ai-models.json" 2>/dev/null)"
 [ -z "$NOVIS" ] && ok "every listed model reads screenshots, so the picker changes Prompt mode too" || bad "models the picker cannot use for screenshots: $NOVIS"
+echo "── dictation clean-up edge cases ──"
+CTX1="$(printf 'centi|Senti\n' > "$HOME/.cache/senti/ct-rules.txt"; WF_REPLACEMENTS="$HOME/.cache/senti/ct-rules.txt" bash -c 'eval "$(/usr/bin/sed -n "/^clean_text()/,/^}/p" "$1")"; clean_text "(laughs) a centi-meter, centi [BLANK_AUDIO]"' _ "$CFG/senti-dictate.sh" 2>/dev/null)"; /bin/rm -f "$HOME/.cache/senti/ct-rules.txt"
+[ "$CTX1" = "A centi-meter, Senti" ] && ok "non-speech tags are dropped and a dictionary rule does not fire inside a hyphenated word" || bad "clean_text edge cases gave: $CTX1"
 echo "── no lost words ──"
 XR="$(bash -c 'eval "$(/usr/bin/grep "^extract_r()" "$1")"; printf "%s" "Example: <r>your result here</r> <r>REAL</r>" | extract_r; printf "|"; printf "%s" "<r>keep </r> inside</r>" | extract_r' _ "$CFG/senti-prompt.sh" 2>/dev/null)"
 [ "$XR" = "REAL|keep </r> inside" ] && ok "answer extraction takes the real answer, not an echoed example, and is not cut at an inner tag" || bad "answer extraction returned: $XR"
@@ -997,17 +1000,23 @@ rm -rf "$CT"
 echo "── context prefetch (key-down warm-up) ──"
 PKEY="900003"
 SENTI_SKEY="$PKEY" SENTI_SLABEL="senti — ⠐ x — claude" SENTI_HINT="Terminal" bash "$CFG/senti-lib.sh" 2>/dev/null
-PC="$WF_RUN/ctx-craft-$PKEY"
+PC="$(SENTI_SKEY="$PKEY" SENTI_SLABEL="senti — ⠐ x — claude" SENTI_HINT="Terminal" bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-lib.sh"; ctx_file craft' 2>/dev/null)"
 [ -s "$PC" ] && ok "prefetch warmed the craft context ($(wc -c <"$PC" | tr -d ' ') bytes)" \
               || bad "prefetch produced no craft context at $PC"
 PPERM="$(/usr/bin/stat -f '%Lp' "$PC" 2>/dev/null || echo '')"
 [ "$PPERM" = "600" ] && ok "prefetched context is mode 600" || bad "prefetch mode ${PPERM:-missing}, expected 600"
 PCAN="senti-prefetch-canary-$$"
 printf '%s' "$PCAN" > "$PC"
-PR="$(SENTI_SKEY="$PKEY" SENTI_SLABEL="senti — ⠐ x — claude" \
+# The live read comes later, when the title's animated part has changed: same project, same entry.
+PR="$(SENTI_SKEY="$PKEY" SENTI_SLABEL="senti — ⠂ a later task — claude" SENTI_HINT="Terminal" \
       bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-lib.sh"; senti_prompt_craft' 2>/dev/null)"
 [ "$PR" = "$PCAN" ] && ok "live path reads the prefetched context (no rebuild)" \
                     || bad "prefetched context was ignored — the ~220ms saving is not real"
+# Same window id, another project (a tab switch): the cached context must not be served.
+PO="$(SENTI_SKEY="$PKEY" SENTI_SLABEL="otherproj — ⠐ x — claude" SENTI_HINT="Terminal" \
+      bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-lib.sh"; senti_prompt_craft' 2>/dev/null)"
+case "$PO" in *"$PCAN"*) bad "another tab in the same window was served this tab's cached context" ;;
+  *) ok "a tab or app switch in the same window gets its own context, not the cached one" ;; esac
 /bin/rm -f "$WF_RUN"/ctx-*
 SENTI_SKEY="" SENTI_SLABEL="senti — ⠐ x — claude" bash "$CFG/senti-lib.sh" 2>/dev/null
 NK="$(/bin/ls -1 "$WF_RUN" 2>/dev/null | /usr/bin/grep -c '^ctx-.*-$' || true)"
