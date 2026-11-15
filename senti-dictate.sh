@@ -357,7 +357,9 @@ case "${1:-}" in
   stop)   stop ;;
   mictest) mictest ;;
   toggle) if is_recording; then stop; else start; fi ;;
-  cancel) finish_recording; reap_orphans; rm -f "$WF_AUDIO"; log "cancelled" ;;
+  # A new hold can start while this cancel is still stopping the old sox: only remove the audio
+  # when nothing is recording now, or the new take's file is unlinked and comes back empty.
+  cancel) finish_recording; reap_orphans; is_recording || rm -f "$WF_AUDIO"; log "cancelled" ;;
   status) is_recording && echo recording || echo idle ;;
   server) server_up && echo up || echo down ;;
   *) echo "usage: senti-dictate.sh {start|stop|toggle|cancel|status|server}" >&2; exit 1 ;;

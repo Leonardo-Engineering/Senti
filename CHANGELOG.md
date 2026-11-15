@@ -72,6 +72,9 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- Words are no longer lost when a screenshot goes missing (Prompt falls back to text, Context hands your
+  words back), when the answer comes back empty, when a slow model outlasts the watchdog, or when a
+  cancel overlaps the next recording. The answer is no longer cut short when it mentions its own tags.
 - Picking a model now changes Prompt mode with a screenshot too. The larger OpenAI models were not marked
   as reading images, so the screenshot path stayed on the default model whatever the menu said. A model
   pinned in the config is used for text and screenshots alike.

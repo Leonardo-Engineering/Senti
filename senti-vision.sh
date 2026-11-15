@@ -22,7 +22,14 @@ SHOT="${2:-}"
 KIND="${3:-context}"
 export SENTI_HINT="${SENTI_HINT:-${4:-}}"
 blank "$INSTR" && exit 0
-[ -f "$SHOT" ] || { printf ''; exit 0; }
+# No screenshot (it vanished between the capture and now): never exit 0 with nothing, which
+# pasted an empty result and lost the user's words. Prompt mode falls back to the text path;
+# Context cannot work without the screen, so it fails and senti.lua hands the words back.
+if [ ! -f "$SHOT" ]; then
+  echo "$(date '+%F %T') vision: no screenshot at start, $KIND" >> "${WF_LOG:-/dev/null}"
+  [ "$KIND" = "prompt" ] && exec bash "$HOME/.config/senti/senti-prompt.sh"
+  exit 3
+fi
 
 # Downscale the retina screenshot with sips (built-in; no python deps) so the API
 # call is fast and cheap: full-res ~3000px/4MB → a ~1536px JPEG that keeps on-screen

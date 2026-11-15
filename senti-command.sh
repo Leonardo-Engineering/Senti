@@ -55,7 +55,7 @@ if [ "$RC" -ne 0 ] || blank "$OUT"; then
 fi
 
 # Extract only what's between the sentinel tags (discards any stray preamble).
-RESULT="$(printf '%s' "$OUT" | /usr/bin/perl -0777 -ne 'print $1 if /<r>(.*?)<\/r>/s')"
+RESULT="$(printf '%s' "$OUT" | /usr/bin/perl -0777 -ne 'my @o = /<r>/g; if (@o == 1) { print $1 if /<r>(.*)<\/r>/s } else { my @m = /<r>(.*?)<\/r>/sg; print $m[-1] if @m }')"   # see extract_r in senti-prompt.sh
 blank "$RESULT" && RESULT="$OUT"                 # fallback if the model omitted tags
 RESULT="$(printf '%s' "$RESULT" | /usr/bin/perl -0777 -pe 's/^\s+//; s/\s+$//')"
 blank "$RESULT" && exit 3
