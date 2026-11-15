@@ -970,6 +970,19 @@ else
   fi
 fi
 
+echo "── config upgrade keeps user settings ──"
+CFGT="$SRC/senti-config.sh"; [ -f "$CFGT" ] || CFGT="$CFG/senti-config.sh"
+CT="$(mktemp -d)"
+{ cat "$CFG/config.sh"; printf 'WF_BRAIN=1\nWF_MYKNOB="kept value"\nWF_TEXT_MODEL="old-pin"\n'; } | /usr/bin/sed 's/^WF_CONFIG_VERSION=.*/WF_CONFIG_VERSION=3/' > "$CT/config.sh"
+bash "$CFGT" install "$CFG/config.sh" "$CT" >/dev/null 2>&1
+CK="$(HOME="$CT/h" bash -c 'mkdir -p "$HOME/.config/senti"; cp "$1/config.sh" "$1/config.local.sh" "$HOME/.config/senti/" 2>/dev/null; . "$HOME/.config/senti/config.sh"; printf "%s|%s|%s" "${WF_BRAIN:-}" "${WF_MYKNOB:-}" "${WF_TEXT_MODEL:-}"' _ "$CT" 2>/dev/null)"
+[ "$CK" = "1|kept value|" ] && ok "an upgrade keeps the user's settings in config.local.sh (and does not carry a model pin)" \
+                             || bad "config upgrade lost or mis-carried settings: '$CK'"
+[ -f "$CT/config.sh.v3.bak" ] && /usr/bin/cmp -s "$CFG/config.sh" "$CT/config.sh" && ok "the new defaults are installed and the old config.sh is backed up" || bad "config upgrade did not install the defaults or keep a backup"
+LH="$(/usr/bin/shasum < "$CT/config.local.sh" 2>/dev/null)"
+/usr/bin/sed 's/^WF_CONFIG_VERSION=.*/WF_CONFIG_VERSION=99/' "$CFG/config.sh" > "$CT/next.sh"; bash "$CFGT" install "$CT/next.sh" "$CT" >/dev/null 2>&1
+[ "$LH" = "$(/usr/bin/shasum < "$CT/config.local.sh" 2>/dev/null)" ] && ok "a later upgrade never touches config.local.sh" || bad "a later upgrade changed config.local.sh"
+rm -rf "$CT"
 echo "── context prefetch (key-down warm-up) ──"
 PKEY="900003"
 SENTI_SKEY="$PKEY" SENTI_SLABEL="senti — ⠐ x — claude" SENTI_HINT="Terminal" bash "$CFG/senti-lib.sh" 2>/dev/null

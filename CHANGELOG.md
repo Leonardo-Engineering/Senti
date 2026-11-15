@@ -72,6 +72,8 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- Updating no longer wipes your settings. They live in `config.local.sh`, which `install.sh` never
+  overwrites; the first update moves the settings you had added to `config.sh` there for you.
 - A project now picks its own note: exact name first, then whole words. A project called "senti" could
   pick a note called "Essentials" before.
 - Session memory is kept per project, so another tab or project in the same window no longer shows up
