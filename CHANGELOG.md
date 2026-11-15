@@ -76,7 +76,6 @@ All notable changes to Senti. Dates are in US Eastern time.
   pick a note called "Essentials" before.
 - Session memory is kept per project, so another tab or project in the same window no longer shows up
   as "this session".
-||||||| 48b7d29
 - "Today, let's work on" said with a pause (whisper writes a comma) now counts as the trigger it is, so
   the turn keeps its notes and memory. "Think hardware" no longer counts as "think hard".
 - Holding Fn with nothing selected now writes a prompt the way right Command does (focused window,
