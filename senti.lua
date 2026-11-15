@@ -55,6 +55,7 @@ wf.HOLD_COMMAND   = 63     -- keycode: Fn / 🌐 (globe) key → hold to command
 local TOGGLE_VERBATIM = {{"ctrl","alt"}, "d"}
 local TOGGLE_PROMPT   = {{"ctrl","alt"}, "p"}
 local TOGGLE_COMMAND  = {{"ctrl","alt"}, "c"}
+local PASTE_LAST      = {{"ctrl","alt"}, "l"}   -- paste the last result again (kept in memory for 5 minutes)
 local TOGGLE_CONTEXT  = {{"ctrl","alt"}, "v"}   -- screenshot + speak → context-aware insert
 
 -- ── State ──────────────────────────────────────────────────────────────
@@ -1042,8 +1043,160 @@ function wf.paste(text)   -- low-level: put text on the clipboard and ⌘V it
   hs.eventtap.keyStroke({"cmd"}, "v", 0)
 end
 
+-- ── Paste as one transaction ───────────────────────────────────────────────────────────
+-- Everything that pastes goes through wf.deliver, which (1) waits until Option, Control, Fn and
+-- Shift are up, so Cmd+V is not turned into another shortcut by a key still held from a toggle;
+-- (2) asks Accessibility for the focused field's character count and caret position before and
+-- after, never its text, to learn whether the paste landed; (3) puts the user's clipboard back
+-- once, even when two pastes overlap; (4) remembers the result in memory for "paste last".
+wf.TERMINALS = { ["com.apple.Terminal"] = true, ["com.googlecode.iterm2"] = true, ["com.mitchellh.ghostty"] = true,
+                 ["dev.warp.Warp-Stable"] = true, ["net.kovidgoyal.kitty"] = true, ["org.alacritty"] = true,
+                 ["com.github.wez.wezterm"] = true }
+-- Counts only. nil when there is no focused element or it will not say; a password field is
+-- never read beyond its role.
+function wf.axCounts()
+  local ok, res = pcall(function()
+    local el = hs.axuielement.systemWideElement():attributeValue("AXFocusedUIElement")
+    if not el then return nil end
+    pcall(function() el:setTimeout(0.25) end)
+    local role, sub = el:attributeValue("AXRole"), el:attributeValue("AXSubrole")
+    if role == "AXSecureTextField" or sub == "AXSecureTextField" then return { secure = true } end
+    local n = el:attributeValue("AXNumberOfCharacters")
+    local rng = el:attributeValue("AXSelectedTextRange")
+    local loc = type(rng) == "table" and (rng.location or rng.loc) or nil
+    if type(n) ~= "number" then n = nil end
+    if type(loc) ~= "number" then loc = nil end
+    if n == nil and loc == nil then return nil end
+    return { n = n, loc = loc }
+  end)
+  if ok then return res end
+  return nil
+end
+-- verified: the field changed. weak: it changed, but in a terminal, whose count moves on its
+-- own. unchanged: readable and identical (a failed paste if it stays so). unverified: no evidence.
+function wf.pasteVerdict(before, after, terminal)
+  if not before or not after or before.secure or after.secure then return "unverified" end
+  local changed = (before.n ~= nil and after.n ~= nil and before.n ~= after.n)
+               or (before.loc ~= nil and after.loc ~= nil and before.loc ~= after.loc)
+  if changed then return terminal and "weak" or "verified" end
+  if terminal then return "unverified" end
+  if (before.n ~= nil and after.n ~= nil) or (before.loc ~= nil and after.loc ~= nil) then return "unchanged" end
+  return "unverified"
+end
+local function modsHeld()
+  local ok, m = pcall(hs.eventtap.checkKeyboardModifiers)
+  if not ok or type(m) ~= "table" then return false end
+  return (m.alt or m.ctrl or m.fn or m.shift) and true or false      -- Command alone still gives Cmd+V
+end
+local function frontBundle()
+  local ok, id = pcall(function() return hs.application.frontmostApplication():bundleID() end)
+  return ok and id or nil
+end
+
+-- The last result, in memory only: never on disk, in the log, or on wf.* (a diagnostics dump of
+-- wf must not contain it). Forgotten after 5 minutes and when the screen locks.
+local LAST, LAST_TTL = nil, 300
+local function rememberLast(text) LAST = { text = text, at = hs.timer.secondsSinceEpoch() } end
+local function lastResult()
+  if LAST and hs.timer.secondsSinceEpoch() - LAST.at > LAST_TTL then LAST = nil end
+  return LAST and LAST.text or nil
+end
+function wf.lastLength() local t = lastResult(); return t and #t or 0 end
+function wf.forgetLast() LAST = nil end
+function wf.pasteLast()
+  local t = lastResult()
+  if not t then wf.notify("Nothing to paste again.\nSenti keeps the last result for 5 minutes.", 3); return end
+  if wf.state ~= "idle" then return end
+  wf.log("paste last: " .. #t .. " chars")
+  wf.deliver(t, { label = "paste last: pasted", again = true })
+end
+
+wf.txn = nil      -- the open paste: { saved, ours, timer, poll, late }
+local function settle(txn, why)
+  if not txn or txn.done then return end
+  txn.done = true
+  for _, k in ipairs({ "timer", "poll", "late" }) do if txn[k] then txn[k]:stop(); txn[k] = nil end end
+  wf.restoreClipboard(txn.saved, txn.ours)
+  if wf.txn == txn then wf.txn = nil end
+end
+-- Put the user's clipboard back now if a paste is still holding it (before Command mode copies).
+function wf.settlePaste() settle(wf.txn, "settled early") end
+
+function wf.deliver(text, opts)
+  opts = opts or {}
+  local saved
+  if wf.txn and not wf.txn.done then
+    -- A paste is still open (two results inside half a second). What is on the clipboard now is
+    -- OUR earlier text, not the user's: inherit the clipboard that paste saved.
+    local old = wf.txn
+    for _, k in ipairs({ "timer", "poll", "late" }) do if old[k] then old[k]:stop(); old[k] = nil end end
+    old.done = true; saved = old.saved; wf.txn = nil
+  else
+    saved = opts.saved or wf.saveClipboard()
+  end
+  if not opts.again then rememberLast(text) end
+  local function go(waited)
+    local terminal = wf.TERMINALS[frontBundle() or ""] == true
+    local before = wf.axCounts()
+    wf.paste(text)
+    local txn = { saved = saved, ours = hs.pasteboard.changeCount() }
+    wf.txn = txn
+    wf.log((opts.label or "paste:") .. " " .. #text .. " chars" .. (waited > 0 and string.format(" (waited %d ms for modifier keys)", math.floor(waited * 1000)) or ""))
+    local t0, verdict = hs.timer.secondsSinceEpoch(), nil
+    -- The floor: slow apps read the clipboard late, so nothing is restored before 0.5 s unless
+    -- the field itself showed the text arrive.
+    txn.timer = hs.timer.doAfter(0.5, function() txn.timer = nil; if not txn.late then settle(txn) end end)
+    if before == nil or before.secure then wf.log("paste: unverified (the field gives no counts)"); return end
+    txn.poll = hs.timer.doEvery(0.05, function()
+      if txn.done then return end
+      local v = wf.pasteVerdict(before, wf.axCounts(), terminal)
+      local elapsed = hs.timer.secondsSinceEpoch() - t0
+      if v == "verified" or v == "weak" then
+        txn.poll:stop(); txn.poll = nil
+        wf.log(string.format("paste: %s after %d ms", v == "verified" and "verified" or "seen (terminal)", math.floor(elapsed * 1000)))
+        if v == "verified" then
+          if txn.timer then txn.timer:stop() end
+          txn.timer = hs.timer.doAfter(0.15, function() txn.timer = nil; settle(txn) end)
+        end
+      elseif elapsed >= 0.3 then
+        txn.poll:stop(); txn.poll = nil
+        if v ~= "unchanged" then wf.log("paste: unverified"); return end
+        -- Readable and unchanged. Give a slow app until 1.5 s before calling it failed.
+        txn.late = hs.timer.doAfter(1.2, function()
+          txn.late = nil
+          if txn.done then return end
+          local v2 = wf.pasteVerdict(before, wf.axCounts(), terminal)
+          if v2 == "unchanged" then
+            wf.log("paste: FAILED (the field did not change)")
+            wf.notify("The text did not arrive in the field.\nPress ⌃⌥L to paste it again.", 6, wf.TONE.warn)
+          else
+            wf.log("paste: verified late")
+          end
+          settle(txn)
+        end)
+      end
+    end)
+  end
+  if not modsHeld() then go(0); return end
+  -- A modifier is still down (a hands-free toggle just released, or the next hold key).
+  local waited = 0
+  if wf.modWait then wf.modWait:stop() end
+  wf.modWait = hs.timer.doEvery(0.02, function()
+    waited = waited + 0.02
+    local clear = not modsHeld()
+    if not clear and waited < 0.3 then return end
+    wf.modWait:stop(); wf.modWait = nil
+    if clear and wf.state == "idle" and not (opts.checkFocus and wf.focusMoved()) then go(waited); return end
+    -- Still held, a new recording started, or focus moved: do not send Cmd+V into that.
+    wf.setPrivateClipboard(text)
+    wf.log("paste: not sent after waiting " .. math.floor(waited * 1000) .. " ms (keys held, a new recording, or focus moved); " .. #text .. " chars on the clipboard")
+    wf.notify("Senti did not type it because keys were still held.\nIt's on the clipboard. ⌃⌥L pastes it.", 5, wf.TONE.warn)
+  end)
+end
+
 -- Hand text back without typing it, because focus moved during the turn.
 function wf.handBack(text, why)
+  rememberLast(text)
   wf.setPrivateClipboard(text)
   wf.log("handed back " .. #text .. " chars on the clipboard (" .. why .. ")")
   wf.notify("You switched windows, so Senti did not type it.\nIt's on the clipboard.", 5, wf.TONE.warn)
@@ -1064,7 +1217,7 @@ function wf.saveClipboard()
   if #types == 0 then saved.empty = true; return saved end
   local rich = false
   for _, t in ipairs(types) do
-    if t:find("^dyn%.") or t:find("promise") then return saved end
+    if t:find("^dyn%.") or t:find("promise") then saved.unsaved = (saved.text == nil); return saved end
     if not TEXT_TYPES[t] then rich = true end
   end
   if rich then
@@ -1077,7 +1230,9 @@ end
 -- Restore after our paste, unless the user copied something new in the meantime.
 function wf.restoreClipboard(saved, ourCount)
   if not saved or hs.pasteboard.changeCount() ~= ourCount then return end
-  if saved.empty then hs.pasteboard.clearContents(); return end
+  -- unsaved: the user's clipboard held only promised data we could not snapshot. It is gone
+  -- either way once we paste; do not leave the dictated text there in its place.
+  if saved.empty or saved.unsaved then hs.pasteboard.clearContents(); return end
   if saved.all then
     -- pcall's first value is only "didn't throw"; writeAllData's own result says whether
     -- every flavour was written (it clears first, so a failure can leave it empty).
@@ -1091,13 +1246,7 @@ function wf.insert(text)  -- dictation insert: trailing space + clipboard restor
   if not text or text:gsub("%s+","") == "" then wf.log("insert: empty, nothing to paste"); return end
   if wf.TRAILING_SPACE then text = text .. " " end
   if wf.focusMoved() then wf.handBack(text, "focus moved"); return end
-  local prev = wf.saveClipboard()
-  wf.paste(text)
-  local ours = hs.pasteboard.changeCount()
-  wf.log("insert: pasted " .. #text .. " chars")
-  hs.timer.doAfter(0.5, function()   -- give slow apps time to read the clipboard before restoring
-    wf.restoreClipboard(prev, ours)
-  end)
+  wf.deliver(text, { label = "insert: pasted", checkFocus = true })
 end
 
 -- Command Mode: transform the current selection (or generate at cursor) by voice.
@@ -1148,6 +1297,7 @@ end
 function wf.runCommand(command, turn)
   wf.hud.show("thinking")
   if wf.cmdPoll then wf.cmdPoll:stop(); wf.cmdPoll = nil end   -- an abandoned turn's poll
+  wf.settlePaste()   -- an earlier paste may still hold the user's clipboard: put it back before we snapshot
   local prevClip = wf.saveClipboard()
   -- If this turn is abandoned, the watchdog restores this clipboard (see setState).
   if wf.pending and wf.pending.turn == turn then wf.pending.clip = prevClip end
@@ -1190,6 +1340,7 @@ function wf.runCommand(command, turn)
 end
 -- What happens once the selection is known (from Accessibility or from the copy).
 function wf.commandWith(command, turn, prevClip, sel, copied)
+  wf.cmdCopyCount = copied and hs.pasteboard.changeCount() or nil   -- the clipboard as our Cmd+C left it
   do
     local f = io.open(wf.SELFILE, "w"); if f then f:write(sel); f:close() end
     wf.log("command: " .. #command .. " chars on " .. #sel .. " selected chars")  -- not the text itself
@@ -1222,18 +1373,19 @@ function wf.commandWith(command, turn, prevClip, sel, copied)
       out = (out or ""):gsub("%s+$", "")
       if exitCode ~= 0 or out == "" then
         wf.log("command: AI request failed (exit " .. tostring(exitCode) .. "), selection left unchanged")
-        wf.restoreClipboard(prevClip, hs.pasteboard.changeCount())
+        -- Only undo our own Cmd+C. Passing the current count made the guard useless, and a copy
+        -- the user made while the request ran was overwritten.
+        if copied then wf.restoreClipboard(prevClip, wf.cmdCopyCount or -1) end
         wf.notify(wf.aiNotice(exitCode ~= 0 and exitCode or 17, "command", false), 6, wf.TONE.warn)
         return
       end
       if wf.focusMoved() then
-        wf.restoreClipboard(prevClip, hs.pasteboard.changeCount())
+        if copied then wf.restoreClipboard(prevClip, wf.cmdCopyCount or -1) end
         wf.handBack(out, "focus moved during command"); return
       end
-      wf.paste(out)                            -- replaces the selection, or inserts at cursor
-      local ours = hs.pasteboard.changeCount()
-      wf.log("command: applied " .. #out .. " chars")
-      hs.timer.doAfter(0.5, function() wf.restoreClipboard(prevClip, ours) end)
+      -- Replaces the selection, or inserts at the cursor. The clipboard to put back is the one
+      -- from before our Cmd+C, when there was one.
+      wf.deliver(out, { label = "command: applied", saved = copied and prevClip or nil, checkFocus = true })
     end)
     wf.aiTask = task
   end
@@ -2175,6 +2327,11 @@ local function menu()
         wf.notify("System Settings ▸ Privacy ▸ Screen Recording →\nenable Hammerspoon, then relaunch it", 5, wf.TONE.warn)
         hs.execute("/usr/bin/open 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'")
       end },
+    (function()
+      local n = wf.lastLength()
+      if n == 0 then return { title = "Paste last result (nothing kept)", disabled = true } end
+      return { title = "Paste last result (" .. n .. " characters)  ⌃⌥L", fn = function() wf.pasteLast() end }
+    end)(),
     { title = "Re-arm hotkeys", fn = function() wf.armTap(); wf.notify("Hotkeys re-armed", 2, wf.TONE.ok) end },
     (function()
       local rival = wf.keyClash()
@@ -2274,6 +2431,16 @@ if wf.hkC then wf.hkC:delete() end
 wf.hkC = hs.hotkey.bind(TOGGLE_COMMAND[1], TOGGLE_COMMAND[2], function()
   wf.log("toggle ⌃⌥C")
   if wf.state == "recording" then wf.endCapture() else wf.snapAndCapture("command") end
+end)
+if wf.hkL then wf.hkL:delete() end
+-- On release, so Control and Option are on their way up before Cmd+V is sent.
+wf.hkL = hs.hotkey.bind(PASTE_LAST[1], PASTE_LAST[2], nil, function() wf.log("paste last ⌃⌥L"); wf.pasteLast() end)
+if wf.lockWatcher then wf.lockWatcher:stop() end
+pcall(function()
+  wf.lockWatcher = hs.caffeinate.watcher.new(function(ev)
+    if ev == hs.caffeinate.watcher.screensDidLock then wf.forgetLast() end
+  end)
+  wf.lockWatcher:start()
 end)
 if wf.hkVi then wf.hkVi:delete() end
 wf.hkVi = hs.hotkey.bind(TOGGLE_CONTEXT[1], TOGGLE_CONTEXT[2], function()

@@ -255,6 +255,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 | Hold **Fn (🌐)** | Command (transform selected text by voice). Nothing selected → runs the Prompt path (`runCommand` → `runAIMode`); the owner used Fn this way 15 of 15 turns on 15 Nov 2026 |
 | **⌃⌥V** | Context (screenshot + voice → context-aware reply/edit) |
 | `⌃⌥D` / `⌃⌥P` / `⌃⌥C` | hands-free toggle versions |
+| `⌃⌥L` | paste the last result again (memory only, 5 min TTL, cleared on screen lock; a file-local `LAST`, never on `wf.*`) |
 
 Three macOS permissions on **Hammerspoon**: Accessibility (type), Microphone (record),
 Screen Recording (context/vision).

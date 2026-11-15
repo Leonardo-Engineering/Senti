@@ -90,6 +90,12 @@ the page is yours, in your workspace.
 
 Some of this is sent, as the tables above say. The rest never leaves the Mac.
 
+- After it pastes, Senti asks macOS Accessibility for the focused field's character count and cursor
+  position, for up to 1.5 seconds, to check that the text arrived. It reads those two numbers, never
+  the field's text, and never anything from a password field. Nothing from this check is sent or saved.
+- The last result is kept in memory for 5 minutes so `⌃⌥L` can paste it again. It is never written to
+  disk or to the log, and it is forgotten when the screen locks.
+
 - The name of the app in front and its window title. The title picks the model guidance and, on
   heavy turns only, supplies the project and task listed above.
 - The last 120 KB of the newest Claude Code session file for the project in the title
