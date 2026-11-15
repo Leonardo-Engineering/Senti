@@ -6,6 +6,9 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Added
 
+- Paste check: after pasting, Senti checks through Accessibility that the text arrived (two numbers, never
+  the field's text) and tells you if it did not. `⌃⌥L` pastes the last result again; it is kept in memory
+  for 5 minutes and never written to disk.
 - **Anthropic and OpenRouter** as AI providers next to OpenAI, behind one adapter in `senti-ai.sh`,
   each with its own key. Add a key for any of them in the menu bar and pick a model.
 - `ai-models.json`: every provider and model Senti knows, with prices and the efforts each model
@@ -77,6 +80,10 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- A paste waits until Option, Control, Fn and Shift are released, so a key still held from a hands-free
+  toggle cannot turn it into another shortcut. If they stay held, the text goes to the clipboard.
+- Two results arriving within half a second no longer leave the first one on your clipboard, and a copy you
+  make while a Command request is running is no longer overwritten when that request fails.
 - Fn with nothing selected no longer waits 0.8 seconds: Senti asks Accessibility what is selected and only
   falls back to copying when the app cannot say. Your clipboard is left alone in that case.
 - After a tab switch in the same window, a prompt uses that tab's context, and a result is not pasted into

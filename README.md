@@ -69,6 +69,7 @@ brief.
 | Hold **Fn** | **Command** | Transforms the text you selected by voice ("make this a bullet list", "fix the grammar"). Sends your words and the selection. With no selection there is nothing to edit, so it writes a prompt from what you said, exactly as right ⌘ does. |
 | **⌃⌥V** | **Context** | Takes a screenshot plus your instruction, then drafts a reply, edit or answer at the cursor. |
 | `⌃⌥D` / `⌃⌥P` / `⌃⌥C` | Toggles | Hands-free versions of Dictate, Prompt and Command. |
+| `⌃⌥L` | **Paste last** | Pastes the last result again. Senti keeps it in memory for 5 minutes, never on disk, and forgets it when the screen locks. |
 
 Press Esc while the pill is showing to cancel. A small pill at the bottom of the screen shows your
 live microphone level while you speak, then disappears. The menu-bar icon holds the speed setting
