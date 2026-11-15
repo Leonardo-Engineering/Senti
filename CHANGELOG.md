@@ -72,6 +72,8 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- "Today, let's work on" said with a pause (whisper writes a comma) now counts as the trigger it is, so
+  the turn keeps its notes and memory. "Think hardware" no longer counts as "think hard".
 - Holding Fn with nothing selected now writes a prompt the way right Command does (focused window,
   destination model, memory). It used to go to a writing assistant that saw no context, and its output
   could read as off topic.

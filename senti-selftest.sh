@@ -634,12 +634,14 @@ esac
 echo "── intent gating and memory honesty ──"
 IG=0
 for probe in "make this clearer:light" "today let's work on the pipeline:heavy" \
-             "think hard about the cache:heavy" "I need to think hard later:light"; do
+             "think hard about the cache:heavy" "I need to think hard later:light" \
+             "Today, let's work on the site:heavy" "Today. Lets work on it:heavy" \
+             "Think hard.:heavy" "Think hardware choices through:light" "today lets workon it:light"; do
   U="${probe%:*}"; WANT="${probe##*:}"
   GOT="$(bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-lib.sh"; senti_intent "$1"' _ "$U" 2>/dev/null)"
   [ "$GOT" = "$WANT" ] || { bad "intent: \"$U\" → $GOT (want $WANT)"; IG=1; }
 done
-[ "$IG" = "0" ] && ok "intent gating: trigger phrases heavy, everything else light (4 probed)"
+[ "$IG" = "0" ] && ok "intent gating: trigger phrases heavy (with commas and pauses too), everything else light (9 probed)"
 MID="$(bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-lib.sh"; senti_intent "explain why I should think hard here"' 2>/dev/null)"
 [ "$MID" = "light" ] && ok "mid-sentence trigger does not escalate" || bad "mid-sentence 'think hard' wrongly escalated to $MID"
 NSENT0="$(/usr/bin/grep -c 'sent:' "$WF_LOG" 2>/dev/null)"
