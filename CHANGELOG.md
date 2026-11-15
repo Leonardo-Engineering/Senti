@@ -72,6 +72,9 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- Senti now says when another dictation tool is running on the same keys (Wispr Flow uses Fn and right
+  Command by default), at launch and in the menu. If the text Fn copies is just what you said, pasted by
+  that tool, it is no longer treated as a selection to edit.
 - Updating no longer wipes your settings. They live in `config.local.sh`, which `install.sh` never
   overwrites; the first update moves the settings you had added to `config.sh` there for you.
 - A project now picks its own note: exact name first, then whole words. A project called "senti" could
