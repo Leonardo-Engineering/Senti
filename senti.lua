@@ -1085,6 +1085,29 @@ function wf.insert(text)  -- dictation insert: trailing space + clipboard restor
 end
 
 -- Command Mode: transform the current selection (or generate at cursor) by voice.
+-- Another dictation tool on the same keys. Wispr Flow's defaults bind Fn (push to talk) and right
+-- Command (its prompt polish), exactly Senti's Command and Prompt keys: with both running, one
+-- press drives both tools and each pastes (found 15 Nov 2026). Senti cannot fix that; it can say so.
+wf.RIVALS = { "Wispr Flow" }
+function wf.keyClash()
+  for _, name in ipairs(wf.RIVALS) do
+    local ok, app = pcall(hs.application.get, name)
+    if ok and app then return name end
+  end
+  return nil
+end
+-- With such a tool running, the "selection" Command mode copies can be that tool's own paste of
+-- what was just said. A selection that is nearly the spoken words is not a selection.
+function wf.sameWords(a, b)
+  local function n(x) return (tostring(x or ""):lower():gsub("[^%w]", "")) end
+  a, b = n(a), n(b)
+  if #a < 12 or #b < 12 then return false end
+  if a == b then return true end
+  local short, long = a, b
+  if #short > #long then short, long = long, short end
+  return #short * 10 >= #long * 8 and long:find(short, 1, true) ~= nil
+end
+
 function wf.runCommand(command, turn)
   wf.hud.show("thinking")
   if wf.cmdPoll then wf.cmdPoll:stop(); wf.cmdPoll = nil end   -- an abandoned turn's poll
@@ -1123,6 +1146,10 @@ function wf.runCommand(command, turn)
     -- the prompt exactly as right Command would (focused window, destination model, memory).
     -- Before 15 Nov 2026 this case went to a generic "writing assistant" with no context at
     -- all, and its output read as off topic.
+    if sel:find("%S") and wf.sameWords(sel, command) then
+      wf.log("command: the copied text is what was just said (another dictation tool pasted it?), treated as no selection")
+      sel = ""
+    end
     if not sel:find("%S") then
       os.remove(wf.SELFILE)
       wf.restoreClipboard(prevClip, hs.pasteboard.changeCount())
@@ -2072,6 +2099,13 @@ local function menu()
         hs.execute("/usr/bin/open 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'")
       end },
     { title = "Re-arm hotkeys", fn = function() wf.armTap(); wf.notify("Hotkeys re-armed", 2, wf.TONE.ok) end },
+    (function()
+      local rival = wf.keyClash()
+      if not rival then return { title = "No other dictation tool is using Senti's keys", disabled = true } end
+      return { title = rival .. " is running on the same keys (Fn, right ⌘)", fn = function()
+        wf.notify(rival .. " and Senti both listen to Fn and right ⌘.\nOne press drives both. Quit one, or change its shortcuts.", 7, wf.TONE.warn)
+      end }
+    end)(),
     { title = "-" },
     { title = "Restart engine", fn = function()
         hs.execute("/bin/launchctl kickstart -k gui/$(id -u)/io.senti.server")
@@ -2814,6 +2848,14 @@ wf.refreshKeys(function(st)
   wf.firstRunTimer = hs.timer.doAfter(1.5, function() wf.firstRunTimer = nil; wf.openPanel() end)
 end)
 wf.log("=== init.lua loaded ===")
+-- Say it once per launch, after the "ready" toast has cleared. On wf.* so GC keeps the timer.
+wf.clashTimer = hs.timer.doAfter(8, function()
+  local rival = wf.keyClash()
+  if rival then
+    wf.log("key clash: " .. rival .. " is running; it binds Fn and right Command by default")
+    wf.notify(rival .. " is running and uses the same keys as Senti (Fn, right ⌘).\nOne press drives both. Quit one, or change its shortcuts.", 8, wf.TONE.warn)
+  end
+end)
 
 -- Accessibility is what lets Senti see the hold keys and type. Without it the hotkeys
 -- do nothing and nothing says why, so ask macOS to show its prompt and say it here too.
