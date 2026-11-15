@@ -211,6 +211,15 @@ senti_ai_resolve() {
   local cp="${WF_AI_PROVIDER:-}"
   senti_provider_ok "$cp" || cp=""
   senti_id_ok "$cm" || cm=""
+  # A pin is for both kinds. With only the other kind's model pinned, this kind uses that same
+  # model: before 15 Nov 2026 it fell through to the menu or auto tier, so a config that pinned
+  # Claude for text still sent screenshots to another provider. (Every model in ai-models.json
+  # reads images; one that does not answers with exit 18 and a notice, never a silent reroute.)
+  if [ -z "$cp$cm" ]; then
+    local om
+    if [ "$kind" = vision ]; then om="${WF_TEXT_MODEL:-}"; else om="${WF_VISION_MODEL:-}"; fi
+    senti_id_ok "$om" && cm="$om"
+  fi
   if [ -n "$ep$em" ]; then
     p="$ep"; m="$em"; src="env"
   elif [ -n "$cp$cm" ]; then
