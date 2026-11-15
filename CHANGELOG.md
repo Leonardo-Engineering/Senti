@@ -7,7 +7,7 @@ All notable changes to Senti. Dates are in US Eastern time.
 ### Added
 
 - Paste check: after pasting, Senti checks through Accessibility that the text arrived (two numbers, never
-  the field's text) and tells you if it did not. `⌃⌥L` pastes the last result again; it is kept in memory
+  the field's text) and writes the result to the log. `⌃⌥L` pastes the last result again; it is kept in memory
   for 5 minutes and never written to disk.
 - **Anthropic and OpenRouter** as AI providers next to OpenAI, behind one adapter in `senti-ai.sh`,
   each with its own key. Add a key for any of them in the menu bar and pick a model.
