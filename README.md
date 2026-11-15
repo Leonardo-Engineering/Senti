@@ -127,8 +127,10 @@ What `install.sh` does, in order:
    below) when none is stored yet. The offer is skipped with `--yes`; the move is not.
 
 `./install.sh --yes` installs missing pieces without asking. Running it again later updates Senti.
-When a release changes the config schema (1.1 does: v8 to v9), `install.sh` saves your old file as
-`config.sh.v<N>.bak` and installs the new one; copy your personal settings back from that file.
+Put your own settings in `~/.config/senti/config.local.sh`: `install.sh` never overwrites that file.
+`config.sh` holds the defaults and is replaced on every update (the previous one is kept as
+`config.sh.v<N>.bak`). The first update from an older install moves the settings you had added to
+`config.sh` into `config.local.sh` for you, and lists any line it was unsure about there as a comment.
 Your `replacements.txt`, `brain-map.txt` and eval cases are kept.
 
 The [Releases page](https://github.com/Leonardo-Engineering/Senti/releases/latest) has the same

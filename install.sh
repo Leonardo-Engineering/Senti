@@ -150,29 +150,9 @@ mkdir -p "$CFG/eval"; [ -f "$CFG/eval/cases.txt" ] || cp "$HERE/eval/cases.txt" 
 [ -f "$CFG/replacements.txt" ] || cp "$HERE/replacements.txt" "$CFG/"
 [ -f "$CFG/brain-map.txt" ]    || cp "$HERE/brain-map.txt" "$CFG/"
 
-# config.sh is user-tunable, so it installs only-if-missing and a re-run never
-# clobbers local tuning. But that means a stale config can silently pin retired
-# settings (e.g. an old vision model) and make an upgrade a no-op. WF_CONFIG_VERSION
-# guards that: on a schema bump we back the old file up rather than keep it.
-# NB: `|| true` is load-bearing — under `set -e -o pipefail`, grep finding nothing
-# (which is exactly the case for a pre-versioning config.sh) would abort the install.
-repo_ver()  { { /usr/bin/grep -E '^WF_CONFIG_VERSION=' "$1" 2>/dev/null || true; } | head -1 | cut -d= -f2 | tr -d '[:space:]'; }
-is_num()    { case "${1:-}" in ''|*[!0-9]*) return 1 ;; *) return 0 ;; esac; }
-if [ ! -f "$CFG/config.sh" ]; then
-  cp "$HERE/config.sh" "$CFG/"
-else
-  HAVE="$(repo_ver "$CFG/config.sh")"; WANT="$(repo_ver "$HERE/config.sh")"
-  is_num "$HAVE" || HAVE=0
-  is_num "$WANT" || WANT=0
-  if [ "$HAVE" -lt "$WANT" ]; then
-    # One backup per version: a single .bak slot was overwritten by the next bump, so
-    # tuning never re-applied from an older backup was lost for good.
-    cp "$CFG/config.sh" "$CFG/config.sh.v$HAVE.bak"
-    cp "$HERE/config.sh" "$CFG/config.sh"
-    echo "  ! config.sh schema v$HAVE → v$WANT: yours saved to config.sh.v$HAVE.bak"
-    echo "    Copy your personal settings back from the .bak. Model IDs are no longer set there."
-  fi
-fi
+# config.sh is the shipped defaults, replaced on every install; the user's settings live in
+# config.local.sh, which senti-config.sh carries over once and never overwrites again.
+bash "$HERE/senti-config.sh" install "$HERE/config.sh" "$CFG"
 
 echo "→ microphone-permission helper (Swift/AVFoundation)"
 # Never let this abort the install: under set -e a failed build (an SDK mismatch after a

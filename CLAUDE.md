@@ -41,9 +41,11 @@ This repo is the **source**. It is not where the app runs. `./install.sh` deploy
 `~/.config/senti/*` or `~/.hammerspoon/init.lua` as the primary change — those are
 install targets and get overwritten. (Exception: `replacements.txt`, `eval/cases.txt`, `brain-map.txt` are user-tunable and
 install **only if missing**, so a re-run never clobbers the user's local tuning.
-`config.sh` is only-if-missing **plus version-gated**: when `WF_CONFIG_VERSION` bumps,
-install.sh backs the old file up to `config.sh.v<old>.bak` and installs the new schema — a
-stale config once silently pinned a retired model and made an upgrade a no-op.
+`config.sh` is shipped DEFAULTS, replaced on every install by `senti-config.sh` (previous copy kept as
+`config.sh.v<N>.bak`). User settings live in `~/.config/senti/config.local.sh`, which config.sh sources
+(top and bottom) and nothing overwrites; the first run carries over WF_ lines the user had added. Before
+15 Nov 2026 every schema bump (v8, v9, v10) wiped the user's settings, the notes bridge included. Model
+pins are carried commented out — a stale pin once made an upgrade a no-op.
 Scripts and `senti.lua` are code — always overwritten.)
 
 ## Conventions

@@ -30,6 +30,11 @@
 #     local keyword retrieval over the listed vault folders (WF_BRAIN_RETRIEVE, off by default).
 WF_CONFIG_VERSION=10
 
+# Your own settings live in config.local.sh (install.sh never overwrites it). It is read here,
+# before the defaults below (most are VAR="${VAR:-default}", so yours win), and once more at
+# the end of this file for the few values set outright.
+[ -f "$HOME/.config/senti/config.local.sh" ] && . "$HOME/.config/senti/config.local.sh"
+
 # --- Model ---
 # Selected via the menu bar (Fast/Accurate); persisted in model.pref.
 #   accurate = large-v3-turbo-q5  (~0.8s, best accuracy, handles proper nouns)
@@ -201,3 +206,7 @@ WF_SOUND_STOP="${WF_SOUND_STOP:-/System/Library/Sounds/Pop.aiff}"
 # 700 every time, not only at install: a cache wiped by a disk cleanup was recreated 755
 # here, and it holds audio, screenshots and selected text while a turn runs.
 { { [ -d "$WF_RUN" ] || mkdir -p "$WF_RUN"; } && chmod 700 "$WF_RUN"; } 2>/dev/null || true
+
+# Second read of your settings (see the top of this file).
+[ -f "$HOME/.config/senti/config.local.sh" ] && . "$HOME/.config/senti/config.local.sh"
+true

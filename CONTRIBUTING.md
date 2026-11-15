@@ -19,10 +19,10 @@ This repository is the source. `./install.sh` copies it into place:
 
 Edit files here, then run `./install.sh` again. Don't edit the installed copies: the next install
 overwrites the scripts and `init.lua`. `replacements.txt`, `brain-map.txt` and `eval/cases.txt` are
-installed only when missing, so your local tuning survives. `config.sh` is installed when missing,
-and also when a release changes the config schema (1.1 does: v8 to v10): `install.sh` then saves the
-old file as `config.sh.v<N>.bak` and installs the new one, and you copy your personal settings back
-from it. If you change the schema, bump `WF_CONFIG_VERSION` in `config.sh`.
+installed only when missing, so your local tuning survives. `config.sh` is the shipped defaults:
+`senti-config.sh` replaces it on every install and keeps the previous one as `config.sh.v<N>.bak`.
+User settings live in `config.local.sh`, which nothing overwrites. If you change the schema, bump
+`WF_CONFIG_VERSION` in `config.sh`.
 
 ## Before you open a pull request
 
