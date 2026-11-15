@@ -35,6 +35,12 @@ proj()  { printf '%s' "$1" | /usr/bin/awk -F ' — ' '{print $1}' | /usr/bin/sed
 task()  { printf '%s' "$1" | /usr/bin/awk -F ' — ' '{print $2}' \
           | /usr/bin/sed 's/^[^[:alnum:]]*//; s/^ *//; s/ *$//'; }
 
+# The project a turn belongs to: the title's first field, only when the title has the
+# "project — task — command" shape. A window id alone is not a session: tabs and projects in
+# one window share it, and a heavy turn was handed another project's turns as "this session"
+# (15 Nov 2026). Each noted turn stores this key and recall returns only matching turns.
+pkey()  { case "$1" in *" — "*) proj "$1" | /usr/bin/tr 'A-Z' 'a-z' | /usr/bin/tr -cd 'a-z0-9' ;; esac; }
+
 safe_key() { printf '%s' "${1:-unknown}" | /usr/bin/tr -cd '[:alnum:]._-' | cut -c1-64; }
 FILE="$DIR/$(safe_key "$KEY").tsv"
 
@@ -48,7 +54,7 @@ case "$CMD" in
     # One line per turn: time, mode, the utterance flattened + clipped, and the epoch second
     # (recall ignores turns older than the TTL even in a file that new turns keep fresh).
     FLAT="$(printf '%s' "$TEXT" | /usr/bin/tr '\n\t' '  ' | cut -c1-200)"
-    printf '%s\t%s\t%s\t%s\n' "$(date '+%H:%M')" "${MODE:-dictate}" "$FLAT" "$(date '+%s')" >> "$FILE"
+    printf '%s\t%s\t%s\t%s\t%s\n' "$(date '+%H:%M')" "${MODE:-dictate}" "$FLAT" "$(date '+%s')" "$(pkey "$LABEL")" >> "$FILE"
     chmod 600 "$FILE" 2>/dev/null
     # Trim in place to the last N turns.
     if [ "$(wc -l < "$FILE" 2>/dev/null || echo 0)" -gt "$KEEP" ]; then
@@ -57,7 +63,8 @@ case "$CMD" in
     ;;
 
   recall)
-    P="$(proj "$LABEL")"; T="$(task "$LABEL")"
+    P=""; T=""
+    case "$LABEL" in *" — "*) P="$(proj "$LABEL")"; T="$(task "$LABEL")" ;; esac   # other titles are not "project — task"
     OUT=""
     [ -n "$P" ] && OUT="Working directory / project: $P"
     [ -n "$T" ] && OUT="$OUT
@@ -67,7 +74,7 @@ What this session is currently doing: $T"
       # file fresh while its oldest turns age past the TTL. Lines from before the epoch
       # column existed carry no age, so they are dropped too (safe side).
       CUT=$(( $(date '+%s') - TTL_H * 3600 ))
-      TURNS="$(CUT="$CUT" /usr/bin/awk -F '\t' '$2 != "verbatim" && $4 != "" && $4 + 0 >= ENVIRON["CUT"] + 0 {printf "  [%s %s] %s\n", $1, $2, $3}' "$FILE")"
+      TURNS="$(CUT="$CUT" PK="$(pkey "$LABEL")" /usr/bin/awk -F '\t' '$2 != "verbatim" && $4 != "" && $4 + 0 >= ENVIRON["CUT"] + 0 && $5 == ENVIRON["PK"] {printf "  [%s %s] %s\n", $1, $2, $3}' "$FILE")"
       [ -n "$TURNS" ] && OUT="$OUT
 Recent turns in THIS session (most recent last) — use them to resolve references like \"that\", \"the same\", \"the other one\":
 $TURNS"

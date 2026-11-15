@@ -72,6 +72,10 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- A project now picks its own note: exact name first, then whole words. A project called "senti" could
+  pick a note called "Essentials" before.
+- Session memory is kept per project, so another tab or project in the same window no longer shows up
+  as "this session".
 - Holding Fn with nothing selected now writes a prompt the way right Command does (focused window,
   destination model, memory). It used to go to a writing assistant that saw no context, and its output
   could read as off topic.
