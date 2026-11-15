@@ -1032,6 +1032,16 @@ for f in senti-prompt.sh senti-vision.sh; do
 done
 [ -z "$GLUED" ] && ok "the rough idea starts on its own line after the fence (both prompt paths)" \
                 || bad "fenced context runs into the rough idea on one line:$GLUED"
+# Prompt and Context capture the focused window, not the whole display: with several windows
+# on screen the model wrote about the biggest one, not the one with the cursor (15 Nov 2026).
+LUA_SRC="$SRC/senti.lua"; [ -f "$LUA_SRC" ] || LUA_SRC="$HOME/.hammerspoon/init.lua"
+if [ -f "$LUA_SRC" ]; then
+  if /usr/bin/grep -q 'wf.shotArgs()' "$LUA_SRC" && /usr/bin/grep -q '"-l", tostring' "$LUA_SRC"; then
+    ok "the screenshot is of the focused window (screencapture -l), full screen only as the fallback"
+  else bad "the screenshot is the whole display: prompts can follow the wrong window"; fi
+fi
+/usr/bin/grep -qF 'The spoken idea decides the topic' "$CFG/senti-vision.sh" \
+  && ok "the vision prompt puts the spoken idea ahead of the screen" || bad "the vision prompt lets the screen decide the topic"
 SS="$CFG/senti-session.sh"
 SENTI_IN="verbatim-canary-7Q" SENTI_SKEY="900004" bash "$SS" note "" "" verbatim >/dev/null 2>&1
 VREC="$(SENTI_SKEY="900004" SENTI_SLABEL="proj — x" bash "$SS" recall 2>/dev/null)"

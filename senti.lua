@@ -1917,12 +1917,30 @@ end
 -- Snapshot the screen now (for prompt + context modes), then start capturing.
 -- Prompt mode skips the capture entirely when "Use a screenshot in Prompt" is off; Context
 -- mode always captures (the screen is what it is for). Decided once per turn, at key-down.
+-- Capture the FOCUSED WINDOW, not the whole display. With several windows on screen the
+-- model wrote about the biggest one (9 of 9 runs on 15 Nov 2026), not the one with the
+-- cursor, so prompts came back on the wrong topic. A window too small to carry context
+-- (a palette, a dialog), or no window at all, falls back to the main display.
+function wf.shotArgs()
+  local ok, id = pcall(function()
+    local w = hs.window.focusedWindow()
+    if not w then return nil end
+    local f = w:frame()
+    if not f or f.w < 480 or f.h < 320 then return nil end
+    return w:id()
+  end)
+  if ok and type(id) == "number" and id > 0 then
+    return { "-x", "-o", "-l", tostring(math.floor(id)), wf.SHOT }   -- -o: no window shadow
+  end
+  return { "-x", "-m", wf.SHOT }
+end
+
 function wf.snapAndCapture(mode)
   if wf.state ~= "idle" then return end
   os.remove(wf.SHOT)   -- clear any stale shot so a failed capture can't reuse an old screen
   wf.shotThisTurn = (mode ~= "prompt") or (wf.prefs and wf.prefs.prompt_screen ~= false)
   if wf.shotThisTurn then
-    hs.task.new("/usr/sbin/screencapture", nil, {"-x", "-m", wf.SHOT}):start()
+    hs.task.new("/usr/sbin/screencapture", nil, wf.shotArgs()):start()
   end
   wf.beginCapture(mode)
 end

@@ -22,7 +22,8 @@ describes the code in this repository as of 14 November 2026.
 or `openrouter.ai`. Your API key goes only to that host. Your Notion token goes only to
 `api.notion.com`, and only when the Notion source is on.
 
-The screenshot is of your main display, shrunk with `sips` so its long edge is 1536 pixels
+The screenshot is of the window you are working in (your main display when no window can be
+captured, or the window is very small), shrunk with `sips` so its long edge is 1536 pixels
 (`WF_SHOT_PX` in `config.sh`) and saved as JPEG. If `sips` fails, the original PNG is sent instead.
 
 The self-test and the eval scripts also call your provider, but only when you run them. The

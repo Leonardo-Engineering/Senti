@@ -339,7 +339,9 @@ hostile input, not a remote attacker. Verified defenses — don't regress them:
 - **`find "$root" ! -path '*/.*'` matches the WHOLE path:** a vault under any hidden folder (or this
   repo's `.claude/` scratch) loses every note. Prune hidden names below the root instead:
   `find "$root" -mindepth 1 -name '.*' -prune -o -type f -name '*.md' -print0`.
-- **Prompt screenshot:** taken at key-down (senti.lua) and now also downscaled there by the prefetch
+- **Prompt screenshot:** of the FOCUSED WINDOW (`screencapture -l <id>`, `wf.shotArgs`; main display only as the
+  fallback), because with several windows visible the model wrote about the biggest one, not the one with the
+  cursor (9 of 9 runs, 15 Nov 2026). Taken at key-down (senti.lua) and now also downscaled there by the prefetch
   (`ctx-shot.jpg` + `ctx-shot.sig`: inode, size, ns mtime, target px). senti-vision.sh reuses it
   only on an exact signature match, else runs sips in the background while it assembles the prompt.
   sips output is deterministic, so the bytes sent are unchanged.
