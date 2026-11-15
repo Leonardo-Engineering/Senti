@@ -102,7 +102,10 @@ start() {
   # real mic level; 2048 lands a block every 64 ms (measured). It goes AFTER -d on
   # purpose: is_capture_cmd matches "$WF_SOX -d ", so a flag in front of -d would stop
   # it recognising our own sox, and key-up could no longer stop the recording.
-  "$WF_SOX" -d --buffer 2048 -q -r 16000 -c 1 -b 16 -e signed-integer "$WF_AUDIO" >/dev/null 2>>"$WF_LOG" &
+  # -D (no dither): a muted input must come back as exact zeros. With dither sox wrote -1/0/1
+  # (peak 0.000031), which the silence gate read as a quiet room instead of a dead microphone
+  # (measured 15 Nov 2026), so "no audio captured" was reported as plain silence.
+  "$WF_SOX" -d -D --buffer 2048 -q -r 16000 -c 1 -b 16 -e signed-integer "$WF_AUDIO" >/dev/null 2>>"$WF_LOG" &
   echo $! >"$WF_PIDFILE"
   log "recording started (pid $!)"
   # The orphan sweep runs AFTER the recorder is up, detached: it used to run first and held
@@ -329,6 +332,21 @@ stop() {
   # Nothing to stop means key-up beat key-down's start, and the sox that start launches a
   # moment later would record until the next keypress. Sweep for it shortly, detached
   # (stdout too: senti.lua waits for EOF on this script's stdout).
+  # A short tail: people let go of the key while the last word is still leaving their mouth.
+  # WF_TAIL_MS (default 100, 0 turns it off) keeps recording that long after key-up. Not for a
+  # brushed key: a clip under half a second at key-up gets no tail, so a tap stays a tap. If the
+  # turn is cancelled during the tail (Esc removes the pidfile), stop here and transcribe nothing.
+  local tail_ms="${WF_TAIL_MS:-100}" sz
+  case "$tail_ms" in ''|*[!0-9]*) tail_ms=0 ;; esac
+  [ "$tail_ms" -gt 500 ] && tail_ms=500
+  if [ "$tail_ms" -gt 0 ] && is_recording; then
+    sz="$(/usr/bin/stat -f %z "$WF_AUDIO" 2>/dev/null || echo 0)"
+    if [ "${sz:-0}" -ge 16044 ]; then                     # 44-byte header + 0.5 s of 16 kHz 16-bit mono
+      /bin/sleep "$(/usr/bin/printf '0.%03d' "$tail_ms")"
+      if ! is_recording; then log "stop: cancelled during the tail"; return 0; fi
+      log "stop: tail $tail_ms ms"
+    fi
+  fi
   finish_recording || { { /bin/sleep 1; reap_orphans; } >/dev/null 2>&1 & }
   cue "$WF_SOUND_STOP"
   local text; text="$(transcribe)"
@@ -348,7 +366,7 @@ stop() {
 mictest() {
   local f="$WF_RUN/mictest.wav"
   rm -f "$f"
-  "$WF_SOX" -d -q -r 16000 -c 1 -b 16 "$f" trim 0 1.2 >/dev/null 2>>"$WF_LOG"
+  "$WF_SOX" -d -D -q -r 16000 -c 1 -b 16 "$f" trim 0 1.2 >/dev/null 2>>"$WF_LOG"
   if [ -s "$f" ]; then
     "$WF_SOX" "$f" -n stat 2>&1 | /usr/bin/awk '/Maximum amplitude/{print $3}'
   else

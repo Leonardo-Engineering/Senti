@@ -207,6 +207,10 @@ WF_SOUND_STOP="${WF_SOUND_STOP:-/System/Library/Sounds/Pop.aiff}"
 # here, and it holds audio, screenshots and selected text while a turn runs.
 { { [ -d "$WF_RUN" ] || mkdir -p "$WF_RUN"; } && chmod 700 "$WF_RUN"; } 2>/dev/null || true
 
+# Keep recording this many milliseconds after key-up, so a last word still being spoken as the
+# key is released is not cut. 0 turns it off; a brushed key (under half a second) never gets it.
+WF_TAIL_MS="${WF_TAIL_MS:-100}"
+
 # Second read of your settings (see the top of this file).
 [ -f "$HOME/.config/senti/config.local.sh" ] && . "$HOME/.config/senti/config.local.sh"
 true

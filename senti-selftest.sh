@@ -978,6 +978,47 @@ NOVIS="$(/usr/bin/python3 -I -c 'import json,sys; print(" ".join(m["id"] for m i
 echo "── dictation clean-up edge cases ──"
 CTX1="$(printf 'centi|Senti\n' > "$HOME/.cache/senti/ct-rules.txt"; WF_REPLACEMENTS="$HOME/.cache/senti/ct-rules.txt" bash -c 'eval "$(/usr/bin/sed -n "/^clean_text()/,/^}/p" "$1")"; clean_text "(laughs) a centi-meter, centi [BLANK_AUDIO]"' _ "$CFG/senti-dictate.sh" 2>/dev/null)"; /bin/rm -f "$HOME/.cache/senti/ct-rules.txt"
 [ "$CTX1" = "A centi-meter, Senti" ] && ok "non-speech tags are dropped and a dictionary rule does not fire inside a hyphenated word" || bad "clean_text edge cases gave: $CTX1"
+echo "── capture: tail after key-up, taps, cancel (stand-in recorder) ──"
+# A stand-in for sox: appends a 2048-byte block of zeros every 64 ms until SIGINT, and answers
+# the "-n stat" pass from the file size. perl, because a backgrounded bash cannot trap SIGINT.
+FSOX="$HOME/.cache/senti/fakesox"
+/bin/cat > "$FSOX" <<'FAKESOX'
+#!/usr/bin/perl
+use strict; my @a = @ARGV;
+if (grep { $_ eq "stat" } @a) { my $sz = (-s $a[0]) || 44; printf STDERR "Maximum amplitude:     0.000000\nLength (seconds):      %.6f\n", ($sz - 44) / 32000; exit 0; }
+my $f = $a[-1]; $SIG{INT} = sub { exit 0 };
+open(my $fh, ">", $f) or exit 1; select($fh); $| = 1; print "\0" x 44;
+while (1) { print "\0" x 2048; select(undef, undef, undef, 0.064); }
+FAKESOX
+/bin/chmod 700 "$FSOX"
+capsize() {   # capsize <tail ms> <hold seconds> → bytes recorded, through the real start and stop
+  WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS="$1" bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1
+  /bin/sleep "$2"
+  WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS="$1" WF_URL="http://127.0.0.1:1" bash "$CFG/senti-dictate.sh" stop >/dev/null 2>&1
+  /usr/bin/stat -f %z "$HOME/.cache/senti/capture.wav" 2>/dev/null || echo 0
+}
+T0=$(capsize 0 1.0); T3=$(capsize 300 1.0)
+[ "$((T3 - T0))" -ge 4096 ] && ok "a 300 ms tail records at least 2 more blocks after key-up ($T0 → $T3 bytes)" \
+                            || bad "the tail added no audio: $T0 bytes without, $T3 with 300 ms"
+NT0="$(/usr/bin/grep -c 'stop: tail' "$WF_LOG" 2>/dev/null || true)"
+TAPOUT="$(WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS=300 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1; /bin/sleep 0.2; WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS=300 WF_URL="http://127.0.0.1:1" bash "$CFG/senti-dictate.sh" stop 2>/dev/null)"
+NT1="$(/usr/bin/grep -c 'stop: tail' "$WF_LOG" 2>/dev/null || true)"
+[ "$TAPOUT" = "__WF_TAP__" ] && [ "$NT0" = "$NT1" ] && ok "a brushed key gets no tail and is still reported as a tap" \
+                                                    || bad "tap with the tail on: output '$TAPOUT', tail lines $NT0 → $NT1"
+WF_SOX="$FSOX" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1; /bin/sleep 0.9
+( WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS=500 WF_URL="http://127.0.0.1:1" bash "$CFG/senti-dictate.sh" stop > "$HOME/.cache/senti/stop.out" 2>/dev/null ) &
+/bin/sleep 0.15; WF_SOX="$FSOX" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" cancel >/dev/null 2>&1; wait
+CSTOP="$(/bin/cat "$HOME/.cache/senti/stop.out" 2>/dev/null)"; /bin/rm -f "$HOME/.cache/senti/stop.out"
+LEFT="$(/bin/ps -Ao command= | /usr/bin/grep -c "[f]akesox -d" || true)"
+[ -z "$CSTOP" ] && [ "$LEFT" = "0" ] && /usr/bin/grep -q 'stop: cancelled during the tail' "$WF_LOG" \
+  && ok "Esc during the tail: nothing is transcribed and no recorder is left" \
+  || bad "cancel during the tail: stop printed '$CSTOP', recorders left $LEFT"
+/usr/bin/grep -q -- '-d -D --buffer 2048' "$CFG/senti-dictate.sh" && ok "the recorder runs without dither, so a muted microphone reads as exact zeros (dead mic, not a quiet room)" || bad "sox records with dither: a muted mic is mistaken for silence"
+/bin/rm -f "$FSOX" "$HOME/.cache/senti/capture.wav"
+if [ "$CI" = 1 ]; then
+  /usr/bin/grep -q 'function wf.earlyStart' "$SRC/senti.lua" && /usr/bin/grep -q 'first audio block %d ms after key-down' "$SRC/senti.lua" \
+    && ok "senti.lua starts the recorder first at key-down and logs the time to first audio" || bad "senti.lua lacks the early recorder start or the first-audio log"
+fi
 echo "── no lost words ──"
 XR="$(bash -c 'eval "$(/usr/bin/grep "^extract_r()" "$1")"; printf "%s" "Example: <r>your result here</r> <r>REAL</r>" | extract_r; printf "|"; printf "%s" "<r>keep </r> inside</r>" | extract_r' _ "$CFG/senti-prompt.sh" 2>/dev/null)"
 [ "$XR" = "REAL|keep </r> inside" ] && ok "answer extraction takes the real answer, not an echoed example, and is not cut at an inner tag" || bad "answer extraction returned: $XR"
