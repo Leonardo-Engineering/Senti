@@ -127,8 +127,9 @@ The folders `~/.config/senti` and `~/.cache/senti` are mode 700, so other macOS 
 Mac cannot open them. Programs running as you can.
 
 Senti types by pasting. The pasted text is marked transient and concealed on the clipboard, which
-clipboard managers that follow that convention skip. Universal Clipboard can still sync it to your
-other Apple devices.
+clipboard managers that follow that convention skip. It is also written for this Mac only, the macOS
+option that keeps a clipboard item off Universal Clipboard, so it should not reach your other Apple
+devices. That option is set and checked on this Mac; it has not been confirmed with a second device.
 
 ## See what the last request sent
 
