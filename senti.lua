@@ -629,6 +629,12 @@ local function hudSample()
   if exists then wf.hud.seen = true end
   if #got == 0 then return end
   wf.hud.live = true
+  -- Once per turn: how long after key-down the first audio block reached the file. Numbers
+  -- only. This is the real-microphone figure (the first word is lost in this gap).
+  if not wf.firstAudioLogged and wf.keyDownAt then
+    wf.firstAudioLogged = true
+    wf.log(string.format("capture: first audio block %d ms after key-down", math.floor((hs.timer.secondsSinceEpoch() - wf.keyDownAt) * 1000)))
+  end
   local lv = wf.hud.levels
   for _, rms in ipairs(got) do table.remove(lv, 1); lv[NBARS] = levelHeight(rms) end
 end
@@ -1910,6 +1916,18 @@ function wf.runAIMode(raw, turn)
   end
 end
 
+-- Start the recorder FIRST at key-down, before the window reads, the context prefetch, the
+-- screenshot and the pill are built: every millisecond spent on those was audio not recorded,
+-- and the first word is the one that gets lost. Only when the mic is known good (or there is no
+-- helper to ask); otherwise wf.record() starts it once permission is settled.
+function wf.earlyStart()
+  if wf.state ~= "idle" or wf.recorderStarted then return end
+  if not (wf.micOK or not hs.fs.attributes(wf.AUTH)) then return end
+  wf.keyDownAt = hs.timer.secondsSinceEpoch()
+  wf.recorderStarted = true
+  hs.task.new(wf.BASH, nil, {wf.DICTATE, "start"}):start()
+end
+
 function wf.record()
   wf.recStartedAt = hs.timer.secondsSinceEpoch()
   local fw = hs.window.focusedWindow()
@@ -1917,7 +1935,9 @@ function wf.record()
   wf.focusHeadAtStart = wf.titleHead(fw)
   wf.setState("recording")
   wf.log("record: mode="..tostring(wf.mode))
-  hs.task.new(wf.BASH, nil, {wf.DICTATE, "start"}):start()
+  if wf.recorderStarted then wf.recorderStarted = nil                 -- earlyStart already did it
+  else wf.keyDownAt = wf.recStartedAt; hs.task.new(wf.BASH, nil, {wf.DICTATE, "start"}):start() end
+  wf.firstAudioLogged = nil
 end
 
 -- Prompt for / open the mic permission. `andThenRecord` = record once granted.
@@ -1943,6 +1963,7 @@ end
 
 function wf.beginCapture(m)
   if wf.state ~= "idle" then wf.log("beginCapture ignored: state="..wf.state); return end
+  wf.earlyStart()
   wf.mode = m
   -- Which app is the user in? That tells prompt mode which model this prompt is
   -- headed for, so it can tailor to that model. Read it at capture time, before
@@ -2032,6 +2053,7 @@ end
 
 function wf.snapAndCapture(mode)
   if wf.state ~= "idle" then return end
+  wf.earlyStart()
   os.remove(wf.SHOT)   -- clear any stale shot so a failed capture can't reuse an old screen
   -- Context always needs the screen. Prompt, and Command (which becomes a prompt when nothing
   -- is selected), follow the "Use a screenshot in Prompt" switch.
