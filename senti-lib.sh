@@ -144,11 +144,17 @@ senti_prompt_craft() {
 # is the user talking about thinking, not asking for it.
 senti_intent() {
   local t
+  # Normalise before matching: whisper writes "Today, let's work on" (comma after a pause) and
+  # curly apostrophes, and both used to fall through to light, silently dropping the notes and
+  # memory the user had just asked for (15 Nov 2026). Lower-case, drop apostrophes, turn every
+  # other non-alphanumeric run into one space, then match whole words: "think hardware" is not
+  # "think hard".
   t="$(printf '%s' "${1:-}" | /usr/bin/tr '[:upper:]' '[:lower:]' \
-       | /usr/bin/sed 's/^[^a-z]*//; s/[[:space:]][[:space:]]*/ /g')"
-  case "$t" in
-    "today let's work on"*|"today lets work on"*|"today let us work on"*|\
-    "think hard"*|"think harder"*|"let's think hard"*|"lets think hard"*)
+       | LC_ALL=C /usr/bin/sed -e "s/'//g" -e 's/\xe2\x80\x99//g' -e 's/\xe2\x80\x98//g' \
+             -e 's/[^a-z0-9]\{1,\}/ /g' -e 's/^ //' -e 's/ $//')"
+  case "$t " in
+    "today lets work on "*|"today let us work on "*|\
+    "think hard "*|"think harder "*|"lets think hard "*|"lets think harder "*|"let us think hard "*)
       printf 'heavy' ;;
     *) printf 'light' ;;
   esac
