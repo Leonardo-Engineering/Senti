@@ -148,12 +148,29 @@ HINT="${HINT%% — *}"
 norm() { printf '%s' "$1" | /usr/bin/tr 'A-Z' 'a-z' | /usr/bin/tr -cd 'a-z0-9'; }
 NH="$(norm "$HINT")"
 [ "${#NH}" -lt 3 ] && exit 0   # too short to match anything safely
-key_matches() {    # key_matches <map key> → 0 when it names this project (either contains the other)
+# Matching a project to a note name. It used to be "either contains the other" on the squeezed
+# name, first match in alphabetical order: project "senti" picked a folder called "Essentials",
+# and "davincibets_app" picked "App" (15 Nov 2026), so a heavy turn carried another project's
+# note. Now: an exact match (MK=2) always wins; otherwise whole words only (MK=1), and a name
+# shorter than half the project's cannot claim it.
+wordform() { printf '%s' "$1" | /usr/bin/tr 'A-Z' 'a-z' | /usr/bin/tr -cs 'a-z0-9' ' '; }
+WH="$(wordform "$HINT")"; WH="${WH# }"; WH="${WH% }"
+match_kind() {     # match_kind <squeezed name> <word form> → MK: 2 exact, 1 whole-word, 0 none
+  local nk="$1" wk="$2"
+  wk="${wk# }"; wk="${wk% }"
+  MK=0
+  [ -n "$nk" ] || return 0
+  if [ "$nk" = "$NH" ]; then MK=2; return 0; fi
+  [ -n "$wk" ] || return 0
+  case " $wk " in *" $WH "*) MK=1; return 0 ;; esac                  # the name is the project plus more words
+  case " $WH " in *" $wk "*) [ $(( ${#nk} * 2 )) -ge "${#NH}" ] && MK=1 ;; esac
+  return 0
+}
+key_matches() {    # key_matches <map key> → 0 when it names this project
   local NK; NK="$(norm "$1")"
-  [ -n "$NK" ] || return 1
-  case "$NH" in *"$NK"*) return 0 ;; esac
-  case "$NK" in *"$NH"*) return 0 ;; esac
-  return 1
+  [ "${#NK}" -ge 3 ] || return 1
+  match_kind "$NK" "$(wordform "$1")"
+  [ "$MK" != "0" ]
 }
 trim() { local s="$1"; s="${s#"${s%%[![:space:]]*}"}"; printf '%s' "${s%"${s##*[![:space:]]}"}"; }
 
@@ -246,7 +263,8 @@ EOF
   # 2. Allowlisted dirs, matched by normalized name (either contains the other). All the
   # subfolder names of a listed folder are normalized in ONE tr pipeline (names on stdin,
   # never argv): two spawns per folder made this scan cost about 0.5 s on 30 folders.
-  local names norms i
+  local names norms wnorms i WANT
+  for WANT in 2 1; do            # every listed folder for an exact name first, then whole words
   while IFS= read -r rel; do
     [ -d "$VAULT/$rel" ] || continue
     names=()
@@ -260,12 +278,18 @@ EOF
     if [ "${#norms[@]}" != "${#names[@]}" ]; then
       norms=(); for d in "${names[@]}"; do base="${d%/}"; norms+=("$(norm "${base##*/}")"); done
     fi
+    wnorms=()
+    while IFS= read -r NB; do wnorms+=("$NB"); done <<EOF
+$(for d in "${names[@]}"; do base="${d%/}"; printf '%s\n' "${base##*/}"; done | /usr/bin/tr 'A-Z' 'a-z' | /usr/bin/tr -cs 'a-z0-9\n' ' ')
+EOF
+    [ "${#wnorms[@]}" = "${#names[@]}" ] || wnorms=("${norms[@]}")
     i=0
     for d in "${names[@]}"; do
       NB="${norms[$i]}"; i=$((i+1))
       base="${d%/}"; base="${base##*/}"
       [ "${#NB}" -lt 3 ] && continue
-      case "$NH" in *"$NB"*) M=1 ;; *) case "$NB" in *"$NH"*) M=1 ;; *) M=0 ;; esac ;; esac
+      match_kind "$NB" "${wnorms[$((i-1))]}"
+      [ "$MK" = "$WANT" ] && M=1 || M=0
       if [ "$M" = "1" ]; then
         inside_roots "$(realdir "$d")" || { ignored "folder '$rel/$base'"; continue; }
         [ -n "$first" ] || first="$(realdir "$d")"
@@ -291,6 +315,7 @@ EOF
   done <<EOF
 $DIRS
 EOF
+  done
   PROJDIR="$first"
   return 0
 }

@@ -1045,6 +1045,22 @@ fi
 /usr/bin/grep -qF 'The spoken idea decides the topic' "$CFG/senti-vision.sh" \
   && ok "the vision prompt puts the spoken idea ahead of the screen" || bad "the vision prompt lets the screen decide the topic"
 SS="$CFG/senti-session.sh"
+# Session memory belongs to a project, not just a window id: tabs and projects share a window.
+SENTI_IN="alpha-turn-7Q" SENTI_SKEY="900007" SENTI_SLABEL="projA — t — claude" bash "$SS" note "" "" prompt >/dev/null 2>&1
+SENTI_IN="beta-turn-7Q" SENTI_SKEY="900007" SENTI_SLABEL="projB — t — claude" bash "$SS" note "" "" prompt >/dev/null 2>&1
+XREC="$(SENTI_SKEY="900007" SENTI_SLABEL="projB — t — claude" bash "$SS" recall 2>/dev/null)"
+case "$XREC" in *alpha-turn-7Q*) bad "session recall returned another project's turn from the same window" ;;
+  *beta-turn-7Q*) ok "session recall returns only this project's turns" ;;
+  *) bad "session recall lost this project's own turn" ;; esac
+rm -f "$HOME/.cache/senti/sessions/900007.tsv" 2>/dev/null
+# A project picks its own note: exact name first, whole words only, never a mere substring.
+NV="$(mktemp -d)"; for d in App Essentials "Senti Site" Senti; do mkdir -p "$NV/Work/$d"; printf '## Senti\nNOTE-OF-%s\n' "$d" > "$NV/Work/$d/$d.md"; done
+nm() { WF_BRAIN=1 WF_VAULT="$NV" WF_BRAIN_DIRS="Work" SENTI_SLABEL="$1 — x — claude" bash "$CFG/senti-brain.sh" 2>/dev/null | /usr/bin/grep -o 'NOTE-OF-.*' | head -1; }
+NM1="$(nm senti)"; NM2="$(nm davincibets_app)"; NM3="$(nm senti-site)"
+if [ "$NM1" = "NOTE-OF-Senti" ] && [ -z "$NM2" ] && [ "$NM3" = "NOTE-OF-Senti Site" ]; then
+  ok "a project picks its own vault note (exact name first, whole words, no substring matches)"
+else bad "vault note matching: senti→'$NM1' davincibets_app→'$NM2' senti-site→'$NM3'"; fi
+rm -rf "$NV"
 SENTI_IN="verbatim-canary-7Q" SENTI_SKEY="900004" bash "$SS" note "" "" verbatim >/dev/null 2>&1
 VREC="$(SENTI_SKEY="900004" SENTI_SLABEL="proj — x" bash "$SS" recall 2>/dev/null)"
 case "$VREC" in *verbatim-canary-7Q*) bad "a verbatim dictation reached session recall (it would be sent to the API)" ;;
