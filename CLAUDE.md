@@ -250,7 +250,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 |---|---|
 | Hold **right ⌥** | Dictate (verbatim, 100% local) |
 | Hold **right ⌘** | Prompt (rough idea → optimized prompt; reads a screenshot for context) |
-| Hold **Fn (🌐)** | Command (transform selected text by voice) |
+| Hold **Fn (🌐)** | Command (transform selected text by voice). Nothing selected → runs the Prompt path (`runCommand` → `runAIMode`); the owner used Fn this way 15 of 15 turns on 15 Nov 2026 |
 | **⌃⌥V** | Context (screenshot + voice → context-aware reply/edit) |
 | `⌃⌥D` / `⌃⌥P` / `⌃⌥C` | hands-free toggle versions |
 

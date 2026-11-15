@@ -1119,6 +1119,19 @@ function wf.runCommand(command, turn)
     local sel = hs.pasteboard.getContents() or ""
     local f = io.open(wf.SELFILE, "w"); if f then f:write(sel); f:close() end
     wf.log("command: " .. #command .. " chars on " .. #sel .. " selected chars")  -- not the text itself
+    -- Nothing selected: there is no text to edit, so the spoken words are a rough idea. Write
+    -- the prompt exactly as right Command would (focused window, destination model, memory).
+    -- Before 15 Nov 2026 this case went to a generic "writing assistant" with no context at
+    -- all, and its output read as off topic.
+    if not sel:find("%S") then
+      os.remove(wf.SELFILE)
+      wf.restoreClipboard(prevClip, hs.pasteboard.changeCount())
+      if wf.pending and wf.pending.turn == turn then wf.pending.clip = nil end
+      wf.log("command: nothing selected, writing a prompt instead")
+      wf.mode = "prompt"
+      wf.runAIMode(command, turn)
+      return
+    end
     local task
     task = wf.runScript({wf.COMMAND, "", wf.SELFILE}, command, function(exitCode, out)
       if wf.aiTask == task then wf.aiTask = nil end
@@ -1870,7 +1883,7 @@ function wf.beginCapture(m)
   -- instead of paying for three bash spawns at the exact moment they're waiting.
   -- Fire-and-forget: if it doesn't finish in time, the shared functions just build
   -- inline as before. Everything it needs (sessKey/sessLabel/targetHint) is set above.
-  if m == "prompt" then wf.runScript({wf.CTXPRE}, "", nil) end
+  if m == "prompt" or m == "command" then wf.runScript({wf.CTXPRE}, "", nil) end
   -- No helper (checked now, not at load: it can vanish or appear after a re-install):
   -- record anyway — a denied mic still shows up as an all-zero clip.
   if wf.micOK or not hs.fs.attributes(wf.AUTH) then wf.record(); return end
@@ -1938,7 +1951,9 @@ end
 function wf.snapAndCapture(mode)
   if wf.state ~= "idle" then return end
   os.remove(wf.SHOT)   -- clear any stale shot so a failed capture can't reuse an old screen
-  wf.shotThisTurn = (mode ~= "prompt") or (wf.prefs and wf.prefs.prompt_screen ~= false)
+  -- Context always needs the screen. Prompt, and Command (which becomes a prompt when nothing
+  -- is selected), follow the "Use a screenshot in Prompt" switch.
+  wf.shotThisTurn = (mode == "context") or (wf.prefs and wf.prefs.prompt_screen ~= false)
   if wf.shotThisTurn then
     hs.task.new("/usr/sbin/screencapture", nil, wf.shotArgs()):start()
   end
@@ -2106,7 +2121,7 @@ function wf.armTap()
         end
       elseif code == wf.HOLD_COMMAND then
         if flags.fn == true and wf.held == nil and wf.state == "idle" then
-          wf.held = code; wf.heldAt = hs.timer.secondsSinceEpoch(); wf.log("tap: Fn down"); wf.beginCapture("command")
+          wf.held = code; wf.heldAt = hs.timer.secondsSinceEpoch(); wf.log("tap: Fn down"); wf.snapAndCapture("command")
         end
       end
     end)
@@ -2147,7 +2162,7 @@ end)
 if wf.hkC then wf.hkC:delete() end
 wf.hkC = hs.hotkey.bind(TOGGLE_COMMAND[1], TOGGLE_COMMAND[2], function()
   wf.log("toggle ⌃⌥C")
-  if wf.state == "recording" then wf.endCapture() else wf.beginCapture("command") end
+  if wf.state == "recording" then wf.endCapture() else wf.snapAndCapture("command") end
 end)
 if wf.hkVi then wf.hkVi:delete() end
 wf.hkVi = hs.hotkey.bind(TOGGLE_CONTEXT[1], TOGGLE_CONTEXT[2], function()
