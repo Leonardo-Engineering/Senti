@@ -35,6 +35,22 @@ WF_CONFIG_VERSION=10
 # the end of this file for the few values set outright.
 [ -f "$HOME/.config/senti/config.local.sh" ] && . "$HOME/.config/senti/config.local.sh"
 
+# --- Language ---
+# "en", another Whisper language code ("es", "fr", "de", ...) or "auto" to detect it per clip
+# (about 0.75 s slower: the server runs a detection pass first). Picked in the menu bar and kept
+# in lang.pref; a WF_LANG line in config.local.sh wins. The pref is read, never sourced.
+WF_LANG_PREF="$HOME/.cache/senti/lang.pref"
+if [ -z "${WF_LANG:-}" ]; then
+  _wf_lang=""
+  if [ -f "$WF_LANG_PREF" ]; then IFS= read -r _wf_lang < "$WF_LANG_PREF" || true; fi
+  WF_LANG="$_wf_lang"
+  unset _wf_lang
+fi
+case "$WF_LANG" in
+  auto|[a-z][a-z]|[a-z][a-z][a-z]) ;;
+  *) WF_LANG="en" ;;
+esac
+
 # --- Model ---
 # Selected via the menu bar (Fast/Accurate); persisted in model.pref.
 #   accurate = large-v3-turbo-q5  (~0.8s, best accuracy, handles proper nouns)
@@ -52,6 +68,11 @@ if [ -z "${WF_MODEL:-}" ]; then
     fast) WF_MODEL="$WF_MODEL_FAST" ;;
     *)    WF_MODEL="$WF_MODEL_ACCURATE" ;;
   esac
+  # The Fast model (base.en) knows English only. Any other language, or auto-detect, uses the
+  # Accurate model when it is on disk.
+  if [ "$WF_LANG" != "en" ] && [ "$WF_MODEL" = "$WF_MODEL_FAST" ] && [ -f "$WF_MODEL_ACCURATE" ]; then
+    WF_MODEL="$WF_MODEL_ACCURATE"
+  fi
   # Fall back to whichever model is actually on disk. Without this, a fresh install
   # that downloaded only one model points whisper-server at a missing file and
   # dictation is dead on arrival with no obvious cause.
@@ -67,8 +88,6 @@ WF_HOST="${WF_HOST:-127.0.0.1}"
 WF_PORT="${WF_PORT:-8090}"
 WF_URL="${WF_URL:-http://${WF_HOST}:${WF_PORT}}"
 
-# --- Language --- ("auto" to autodetect, or "en", "es", etc.)
-WF_LANG="${WF_LANG:-en}"
 
 # --- Custom dictionary (fixes mistranscriptions like "cloud md" → CLAUDE.md) ---
 WF_REPLACEMENTS="${WF_REPLACEMENTS:-$HOME/.config/senti/replacements.txt}"

@@ -150,6 +150,11 @@ shasum -a 256 -c SHA256SUMS
 - **Screen Recording** (only for Context, and for Prompt with screenshots): menu-bar icon → *Grant
   screen recording*, then relaunch Hammerspoon.
 
+**Language.** English by default. Pick another language, or automatic detection, in the menu bar
+(Language). Detection adds about 0.7 seconds to each dictation. Any other Whisper language code works
+as `WF_LANG` in `~/.config/senti/config.local.sh`. The opening phrases that ask for more context in
+Prompt mode ("think hard", "today let's work on") are English only.
+
 **Fast model (optional).** For a faster, English-only model, download it (148 MB) and switch in the
 menu bar (Speed, then Fast). This download is not checksum-verified:
 

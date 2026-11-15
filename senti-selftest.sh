@@ -1027,6 +1027,48 @@ if [ "$CI" = 1 ]; then
   /usr/bin/grep -q 'function wf.earlyStart' "$SRC/senti.lua" && /usr/bin/grep -q 'first audio block %d ms after key-down' "$SRC/senti.lua" \
     && ok "senti.lua starts the recorder first at key-down and logs the time to first audio" || bad "senti.lua lacks the early recorder start or the first-audio log"
 fi
+echo "── language ──"
+LP="$HOME/.cache/senti/lang.pref"; /bin/rm -f "$LP"
+lang_of() { ( unset WF_LANG WF_MODEL; . "$CFG/config.sh"; printf '%s|%s' "$WF_LANG" "${WF_MODEL##*/}" ); }
+[ "$(lang_of | /usr/bin/cut -d'|' -f1)" = "en" ] && ok "with no choice made the language is English" || bad "default language is '$(lang_of)'"
+echo es > "$LP"; [ "$(lang_of | /usr/bin/cut -d'|' -f1)" = "es" ] && ok "the menu choice (lang.pref) sets the language" || bad "lang.pref=es gave '$(lang_of)'"
+printf 'es; touch %s/pwned\n' "$HOME" > "$LP"; LO="$(lang_of | /usr/bin/cut -d'|' -f1)"
+[ "$LO" = "en" ] && [ ! -e "$HOME/pwned" ] && ok "a malformed lang.pref falls back to English and is never executed" || bad "malformed lang.pref gave '$LO'"
+echo es > "$LP"; [ "$(WF_LANG=fr bash -c '. "$0/config.sh"; printf %s "$WF_LANG"' "$CFG")" = "fr" ] && ok "a WF_LANG the user set wins over the menu choice" || bad "WF_LANG=fr did not win over lang.pref"
+MD="$HOME/.local/share/whisper-models"; MADE=""
+for f in ggml-base.en.bin ggml-large-v3-turbo-q5_0.bin; do [ -e "$MD/$f" ] || { /bin/mkdir -p "$MD"; : > "$MD/$f"; MADE="$MADE $f"; }; done
+MP="$HOME/.cache/senti/model.pref"; MPOLD="$(/bin/cat "$MP" 2>/dev/null || true)"; echo fast > "$MP"
+echo en > "$LP"; LM1="$(lang_of)"; echo de > "$LP"; LM2="$(lang_of)"; echo auto > "$LP"; LM3="$(lang_of)"
+[ "$LM1" = "en|ggml-base.en.bin" ] && [ "$LM2" = "de|ggml-large-v3-turbo-q5_0.bin" ] && [ "$LM3" = "auto|ggml-large-v3-turbo-q5_0.bin" ] \
+  && ok "the English-only Fast model is never used for another language or auto-detect" || bad "Fast model with languages: '$LM1' '$LM2' '$LM3'"
+if [ -n "$MPOLD" ]; then echo "$MPOLD" > "$MP"; else /bin/rm -f "$MP"; fi
+for f in $MADE; do /bin/rm -f "$MD/$f"; done
+# The request: a stand-in recorder and a stand-in curl that records its arguments.
+FSOX2="$HOME/.cache/senti/fakesox2"; FCURL="$HOME/.cache/senti/fakecurl"; CARGS="$HOME/.cache/senti/curl-args.txt"
+/bin/cat > "$FSOX2" <<'FAKESOX'
+#!/usr/bin/perl
+use strict; my @a = @ARGV;
+if (grep { $_ eq "stat" } @a) { printf STDERR "Maximum amplitude:     0.500000\nLength (seconds):      2.000000\n"; exit 0; }
+my $f = $a[-1]; $SIG{INT} = sub { exit 0 };
+open(my $fh, ">", $f) or exit 1; select($fh); $| = 1; print "\0" x 44;
+while (1) { print "\1" x 2048; select(undef, undef, undef, 0.064); }
+FAKESOX
+printf '#!/bin/bash\nprintf "%%s\\n" "$@" > "%s"\nprintf "%%s" "$FAKE_TEXT"\n' "$CARGS" > "$FCURL"; /bin/chmod 700 "$FSOX2" "$FCURL"
+say_as() {   # say_as <lang> <text the stand-in server returns> → what senti-dictate.sh stop prints
+  echo "$1" > "$LP"
+  WF_SOX="$FSOX2" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1; /bin/sleep 0.7
+  WF_SOX="$FSOX2" WF_CURL="$FCURL" FAKE_TEXT="$2" WF_SOUNDS=0 WF_TAIL_MS=0 bash "$CFG/senti-dictate.sh" stop 2>/dev/null
+}
+O1="$(say_as es 'Um, quiero um café. Uh.')"; A1="$(/usr/bin/grep -c '^language=es$' "$CARGS" 2>/dev/null || true)"
+O2="$(say_as en 'So, um, open the file.')";  A2="$(/usr/bin/grep -c '^language=en$' "$CARGS" 2>/dev/null || true)"
+O3="$(say_as auto 'Bom, um dia.')";          A3="$(/usr/bin/grep -c '^language=auto$' "$CARGS" 2>/dev/null || true)"
+[ "$A1$A2$A3" = "111" ] && ok "each transcription request carries the chosen language (es, en, auto)" || bad "language in the request: es=$A1 en=$A2 auto=$A3"
+[ "$O2" = "Open the file. " ] || [ "$O2" = "Open the file." ] && ok "English keeps its filler rules" || bad "English cleanup gave '$O2'"
+case "$O1|$O3" in "Um, quiero um café."*"|Bom, um dia."*) ok "outside English, 'um' is kept as a word and only uh/erm/hmm are dropped" ;; *) bad "non-English cleanup gave '$O1' and '$O3'" ;; esac
+/bin/rm -f "$LP" "$FSOX2" "$FCURL" "$CARGS" "$HOME/.cache/senti/capture.wav"
+if [ "$CI" = 1 ]; then
+  /usr/bin/grep -q 'function wf.langMenu' "$SRC/senti.lua" && /usr/bin/grep -q '"lang", code' "$SRC/senti.lua" && ok "the menu has a language switch that goes through senti-model.sh" || bad "senti.lua has no language menu"
+fi
 echo "── no lost words ──"
 XR="$(bash -c 'eval "$(/usr/bin/grep "^extract_r()" "$1")"; printf "%s" "Example: <r>your result here</r> <r>REAL</r>" | extract_r; printf "|"; printf "%s" "<r>keep </r> inside</r>" | extract_r' _ "$CFG/senti-prompt.sh" 2>/dev/null)"
 [ "$XR" = "REAL|keep </r> inside" ] && ok "answer extraction takes the real answer, not an echoed example, and is not cut at an inner tag" || bad "answer extraction returned: $XR"

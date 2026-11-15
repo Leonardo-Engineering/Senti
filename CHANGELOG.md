@@ -6,6 +6,9 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Added
 
+- Language switch in the menu bar: 15 languages and automatic detection (about 0.7 s slower). The language
+  is sent with each request, so switching does not reload the model. The English-only Fast model is not
+  used for other languages, and English filler removal applies to English only.
 - Paste check: after pasting, Senti checks through Accessibility that the text arrived (two numbers, never
   the field's text) and writes the result to the log. `⌃⌥L` pastes the last result again; it is kept in memory
   for 5 minutes and never written to disk.
