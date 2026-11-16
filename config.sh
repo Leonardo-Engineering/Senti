@@ -120,7 +120,7 @@ WF_LOG="$HOME/Library/Logs/senti.log"
 # Three providers behind one adapter (senti-ai.sh): OpenAI, Anthropic and OpenRouter. The
 # menu bar writes the choice to ~/.config/senti/ai.pref; keys live in the macOS Keychain
 # (senti-key.sh). Defaults: OpenAI gpt-6-luna ($0.10/$0.50 per 1M), Anthropic
-# claude-opus-5-5, OpenRouter openai/gpt-6-luna. ai-models.json lists every model, its
+# claude-haiku-5-5 (same price), OpenRouter openai/gpt-6-luna. ai-models.json lists every model, its
 # price and the efforts it accepts.
 # Pins below OUTRANK the menu choice, which is why they are commented out. Provider and
 # model always resolve as a pair, so a pinned model is never sent to another provider:
