@@ -50,6 +50,6 @@ fi
 RESULT="$(printf '%s' "$OUT" | extract_r | trim)"
 # Degrade in order: tagged answer → untagged answer (model ignored the sentinel but
 # still optimized) → raw transcript.
-blank "$RESULT" && RESULT="$(printf '%s' "$OUT" | trim)"
+case "$OUT" in *"<r>"*) : ;; *) blank "$RESULT" && RESULT="$(printf '%s' "$OUT" | trim)" ;; esac   # an empty tagged answer is not pasted as literal tags
 blank "$RESULT" && RESULT="$RAW"
 printf '%s' "$RESULT"
