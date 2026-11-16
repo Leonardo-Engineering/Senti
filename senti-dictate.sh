@@ -363,9 +363,10 @@ clean_text() {
       # exclamation mark is not a letter, so a rule still fires next to those.
       my $dec = utf8::decode($t);
       for my $ru (@rules) { my ($p, $r) = @$ru; if ($dec) { utf8::decode($p); utf8::decode($r); }
-        # Chinese, Japanese and Thai are written without spaces, so a letter of those scripts beside
+        # Chinese, Japanese, Thai, Lao, Khmer and Burmese are written without spaces, and Korean attaches
+        # particles straight to a word ("cloud code를"), so a letter of those scripts beside
         # the match does not make it part of a word ("我用jason格式" still becomes JSON).
-        $t =~ s/(?<![\p{N}-])(?<![^\P{L}\p{Han}\p{Hiragana}\p{Katakana}\p{Thai}])\Q$p\E(?![\p{N}-])(?![^\P{L}\p{Han}\p{Hiragana}\p{Katakana}\p{Thai}])/$r/gi; }
+        $t =~ s/(?<![\p{N}-])(?<![^\P{L}\p{Han}\p{Hiragana}\p{Katakana}\p{Thai}\p{Hangul}\p{Lao}\p{Khmer}\p{Myanmar}])\Q$p\E(?![\p{N}-])(?![^\P{L}\p{Han}\p{Hiragana}\p{Katakana}\p{Thai}\p{Hangul}\p{Lao}\p{Khmer}\p{Myanmar}])/$r/gi; }
       utf8::encode($t) if $dec;
     }
     print $t;' "$WF_REPLACEMENTS"

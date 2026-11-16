@@ -1112,6 +1112,8 @@ AUD2="$(printf 'senti|Senti\n' > "$HOME/.cache/senti/ct-rules.txt"; WF_REPLACEME
 [ "$AUD2" = "I said “Senti” twice.|¡Senti funciona!|I mean, yes" ] && ok "a dictionary rule fires next to curly quotes and an inverted mark; a filler before a comma adds no question mark" || bad "clean_text (2) gave: $AUD2"
 AUD3="$(printf 'jason|JSON\n' > "$HOME/.cache/senti/ct-rules.txt"; WF_REPLACEMENTS="$HOME/.cache/senti/ct-rules.txt" bash -c 'eval "$(/usr/bin/sed -n "/^clean_text()/,/^}/p" "$0")"; printf "%s|%s|%s|%s" "$(WF_LANG=zh clean_text "我用jason格式")" "$(WF_LANG=ja clean_text "jasonを使う")" "$(WF_LANG=en clean_text "Really, um?!")" "$(WF_LANG=en clean_text "the jasons file")"' "$CFG/senti-dictate.sh" 2>/dev/null)"
 [ "$AUD3" = "我用JSON格式|JSONを使う|Really?|The jasons file" ] && ok "a dictionary rule fires inside Chinese and Japanese text, not inside a longer Latin word; a filler hands back its first closing mark" || bad "clean_text (3) gave: $AUD3"
+AUD4="$(printf 'cloud code|Claude Code\n' > "$HOME/.cache/senti/ct-rules.txt"; WF_REPLACEMENTS="$HOME/.cache/senti/ct-rules.txt" bash -c 'eval "$(/usr/bin/sed -n "/^clean_text()/,/^}/p" "$0")"; printf "%s" "$(WF_LANG=ko clean_text "저는 cloud code를 매일 써요")"' "$CFG/senti-dictate.sh" 2>/dev/null)"
+[ "$AUD4" = "저는 Claude Code를 매일 써요" ] && ok "a dictionary rule fires before a Korean particle" || bad "Korean dictionary rule gave: $AUD4"
 SUT="$(SENTI_IN="$(/usr/bin/perl -e 'print "x" x 198, "\xe2\x80\x99tail"')" bash "$CFG/senti-session.sh" note "aud$$" "proj — t" prompt >/dev/null 2>&1; /bin/cat "$HOME"/.cache/senti/sessions/*aud$$* 2>/dev/null | /usr/bin/tail -1 | /usr/bin/cut -f3 | /usr/bin/perl -ne 'chomp; print((utf8::decode(my $c = $_)) ? "valid" : "broken")')"
 [ "$SUT" = "valid" ] && ok "a session turn cut at 200 bytes never ends in half a character" || bad "session note cut a multi-byte character ('$SUT')"
 /bin/rm -f "$HOME"/.cache/senti/sessions/*aud$$*
@@ -1312,6 +1314,8 @@ EC3="$(HOME="$EA" FAKE_OUT='plain answer' SENTI_IN="shorten" bash "$EA/.config/s
 EP1="$(HOME="$EA" FAKE_OUT='<r></r>' SENTI_IN="my idea words" bash "$EA/.config/senti/senti-prompt.sh" 2>/dev/null)"
 EC4="$(HOME="$EA" FAKE_OUT='<r>an answer whose closing tag was cut' SENTI_IN="shorten" bash "$EA/.config/senti/senti-command.sh" "$EA/sel.txt" 2>/dev/null)"
 EP2="$(HOME="$EA" FAKE_OUT='<r>an answer whose closing tag was cut' SENTI_IN="my idea words" bash "$EA/.config/senti/senti-prompt.sh" 2>/dev/null)"
+EC6="$(HOME="$EA" FAKE_OUT=' <r>cut answer after a space' SENTI_IN="shorten" bash "$EA/.config/senti/senti-command.sh" "$EA/sel.txt" 2>/dev/null)"
+[ "$EC6" = "cut answer after a space" ] && ok "a cut-off answer that starts with a space loses the tag, not the text" || bad "space before a cut tag gave '$EC6'"
 EC5="$(HOME="$EA" FAKE_OUT='Use <r> for ruby text.' SENTI_IN="shorten" bash "$EA/.config/senti/senti-command.sh" "$EA/sel.txt" 2>/dev/null)"
 [ "$EC5" = "Use <r> for ruby text." ] && ok "an untagged answer that only mentions the tag is kept whole" || bad "an answer mentioning the tag gave '$EC5'"
 [ "$EC4" = "an answer whose closing tag was cut" ] && [ "$EP2" = "$EC4" ] && ok "an answer whose closing tag was cut off is kept, not dropped" || bad "unclosed tag: command '$EC4', prompt '$EP2'"

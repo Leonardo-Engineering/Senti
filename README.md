@@ -169,7 +169,7 @@ Put your own settings in `~/.config/senti/config.local.sh`: `install.sh` never o
 Your `replacements.txt`, `snippets.txt`, `brain-map.txt` and eval cases are kept.
 
 The [Releases page](https://github.com/Leonardo-Engineering/Senti/releases/latest) has the same
-source. Release 1.1.0 attaches `senti-1.1.0.tar.gz` and a `SHA256SUMS` file (1.0.0 has no attached files). Check
+source. Releases from 1.1.0 on attach a source tarball (`senti-<version>.tar.gz`) and a `SHA256SUMS` file. Check
 your download in the folder you saved both files to:
 
 ```bash

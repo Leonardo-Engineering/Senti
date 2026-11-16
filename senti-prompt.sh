@@ -51,6 +51,7 @@ RESULT="$(printf '%s' "$OUT" | extract_r | trim)"
 # Degrade in order: tagged answer → untagged answer (model ignored the sentinel but
 # still optimized) → raw transcript.
 if blank "$RESULT"; then
+  OUT="$(printf '%s' "$OUT" | trim)"                                  # a space or newline before the tag
   case "$OUT" in
     *"<r>"*"</r>"*) : ;;                                              # a closed, empty pair: not pasted as literal tags
     "<r>"*) RESULT="$(printf '%s' "${OUT#<r>}" | trim)" ;;           # it starts with the tag and the closing one was cut off
