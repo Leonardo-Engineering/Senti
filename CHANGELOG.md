@@ -6,6 +6,10 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Added
 
+- Prompts are written for the exact model, not only its lab. The knowledge base has a section per model
+  (20: the 4 current Claude models, 5 OpenAI models, 2 Gemini models, Grok, Kimi, Mistral, Qwen, GLM,
+  DeepSeek and MiniMax), each written from that lab's own pages on 15 Nov 2026. ChatGPT resolves to the
+  model ChatGPT runs, Codex to the model in its own config.
 - A weekly models watch (`tools/models-watch.py`, run by a GitHub Action): it reports listed models that are
   gone or changed price, newer models from the same labs, and models with no prompting section, and opens
   an issue. It edits nothing.
@@ -18,8 +22,9 @@ All notable changes to Senti. Dates are in US Eastern time.
   next launch if Senti was closed mid-recording. Off by default.
 - Language switch in the menu bar: 15 languages and automatic detection (0.3 to 0.8 s slower). The language
   is sent with each request, so switching does not reload the model. The English-only Fast model is not
-  used for other languages, and English filler removal applies to English only.
-- Paste check: after pasting, Senti checks through Accessibility that the text arrived (two numbers, never
+  used for other languages. In other languages and in auto-detect Senti still drops uh, uhm, erm and hmm,
+  but keeps "um" (a word in German and Portuguese) and the opening so, okay, well and like.
+- Paste check: after pasting, Senti checks through Accessibility that the text arrived (2 numbers, never
   the field's text) and writes the result to the log. `⌃⌥L` pastes the last result again; it is kept in memory
   for 5 minutes and never written to disk.
 - **Anthropic and OpenRouter** as AI providers next to OpenAI, behind one adapter in `senti-ai.sh`,
@@ -101,6 +106,9 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- Family rules the labs' current pages no longer support were corrected or removed (effort defaults and
+  values per model, a claim about DeepSeek system prompts, old Gemini and Gemma details, and a
+  "never ask it to double-check" line that is right for Opus and wrong for Sonnet 5.5 and Haiku 5.5).
 - 2 OpenRouter list prices that had changed: Kimi K3.1 Pro ($2.30 in, $11.50 out) and DeepSeek v4.1 Flash
   ($0.14 in, $0.42 out).
 - Long dictations no longer lose sentences. On recordings over 30 seconds the speech engine skipped audio at

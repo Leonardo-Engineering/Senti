@@ -39,7 +39,7 @@
 # a hung dictation.
 #
 # TESTS never touch the login keychain: SENTI_KEYCHAIN=<path> makes every call use that
-# keychain file (contract-keychain.md "Test isolation"), and SENTI_SECURITY=<path> swaps
+# keychain file (CLAUDE.md, Gotchas), and SENTI_SECURITY=<path> swaps
 # the security binary (a missing path proves the file fallback).
 #
 # Exit codes: 0 ok, 1 nothing was saved (the file write failed, or an older Keychain key

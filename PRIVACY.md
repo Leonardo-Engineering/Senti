@@ -5,7 +5,7 @@ The 3 AI modes (Prompt, Command and Context) send text, and sometimes a screensh
 provider you chose, and only when you use them.
 
 This page lists exactly what leaves your Mac, what Senti reads, what it stores and for how long. It
-describes the code in this repository as of 14 November 2026.
+describes the code in this repository as of 15 November 2026.
 
 ## What leaves your Mac
 
@@ -24,7 +24,7 @@ or `openrouter.ai`. Your API key goes only to that host. Your Notion token goes 
 
 The screenshot is of the window you are working in (your main display when no window can be
 captured, or the window is very small), shrunk with `sips` so its long edge is 1536 pixels
-(`WF_SHOT_PX` in `config.sh`) and saved as JPEG. If `sips` fails, the original PNG is sent instead.
+(`WF_SHOT_PX`, default in `config.sh`) and saved as JPEG. If `sips` fails, the original PNG is sent instead.
 
 The self-test and the eval scripts also call your provider, but only when you run them. The
 self-test's live check sends a screenshot of your main display.
@@ -32,7 +32,8 @@ self-test's live check sends a screenshot of your main display.
 ### Heavy turns: when history and notes are sent
 
 A Prompt turn is "heavy" only when what you say opens with **"think hard"** or **"today let's work
-on"** (also "think harder", "let's think hard" and "today let us work on"). Every other Prompt turn is
+on"** (also "think harder", "let's think hard", "let's think harder", "let us think hard" and "today let us
+work on"; capitals and punctuation do not matter). Every other Prompt turn is
 light and sends none of the following.
 
 On a heavy turn Senti adds:
@@ -71,7 +72,7 @@ written to the log as a count, for example `sent: vault 'Note.md' 412 chars`,
 
 Every OpenRouter request carries `"provider": {"data_collection": "deny"}`, which tells OpenRouter to
 route only to model hosts that do not store or train on the data. If no host qualifies, the request
-fails instead of going elsewhere. Setting `WF_OPENROUTER_ZDR=1` in `config.sh` also asks for
+fails instead of going elsewhere. Setting `WF_OPENROUTER_ZDR=1` in `config.local.sh` also asks for
 zero-data-retention routing, which is stricter and can leave a model with no host.
 
 ### What your provider does with it
@@ -90,12 +91,19 @@ the page is yours, in your workspace.
 
 Some of this is sent, as the tables above say. The rest never leaves the Mac.
 
-- After it pastes, Senti asks macOS Accessibility for the focused field's character count and cursor
-  position, for up to 1.5 seconds, to check that the text arrived. It reads those two numbers, never
+- Just before and after it pastes, Senti asks macOS Accessibility for the focused field's character count
+  and cursor position, for up to 1.5 seconds, to check that the text arrived. It reads those 2 numbers, never
   the field's text, and never anything from a password field. Nothing from this check is sent or saved.
 - `snippets.txt` (phrases you say and the text Senti types for them) is read on your Mac and never sent.
   The log records the length of an expansion, not its text.
-- With "Mute other audio while recording" on, Senti mutes and unmutes your sound output. It reads nothing.
+- With "Mute other audio while recording" on, Senti mutes and unmutes your sound output. It reads whether
+  the output is already muted and the device's ID, and keeps that ID in `~/.cache/senti/muted-by-senti`
+  until the sound is back, so a crash cannot leave you muted.
+- Whether Wispr Flow is running (8 seconds after launch and when the menu opens), to warn you that both
+  tools listen on the same keys.
+- Fn takes a screenshot at key-down when "Use a screenshot in Prompt" is on, because Senti does not know
+  yet whether text is selected. With a selection the screenshot is not sent, and it is deleted with the
+  turn's other files.
 - The optional Parakeet engine runs on your Mac like the default one: the recording goes to a local
   program (`parakeet-cli`) and nowhere else. Downloading its model is a request you make yourself.
 - The last result is kept in memory for 5 minutes so `⌃⌥L` can paste it again. It is never written to
@@ -106,6 +114,8 @@ Some of this is sent, as the tables above say. The rest never leaves the Mac.
 - The last 120 KB of the newest Claude Code session file for the project in the title
   (`~/.claude/projects/...`), to learn which Claude model you are using. Only the model name can
   reach a prompt, inside the model guidance.
+- When Codex is the app in front: the `model` line of `~/.codex/config.toml`, to learn which OpenAI
+  model Codex is set to. Nothing else in that file is read, and only the model name can reach a prompt.
 - The git branch of `~/code/<project>`, read from `.git/HEAD`, plus your `replacements.txt`. These
   become a short spelling hint for the local speech server and never leave the Mac.
 - The text you select, in Command mode, which is sent as listed above.
@@ -120,7 +130,9 @@ Some of this is sent, as the tables above say. The rest never leaves the Mac.
 |---|---|---|
 | macOS Keychain, service `io.senti` | Your API key for each provider, and your Notion token (account `notion`) | Until you remove it (the key panel, `senti-key.sh clear <provider>` or `clear notion`, or `uninstall.sh`) |
 | `~/.config/senti/<provider>-key`, `notion-key` | Your key or token, only when the Keychain was locked or unavailable. Mode 600, plain text | Until you remove it |
-| `~/.config/senti/ai.pref`, `ui.pref` | Your provider, model and screenshot choices | Until you change them |
+| `~/.config/senti/ai.pref`, `ui.pref` | Your provider, model, screenshot and mute choices, and whether the key panel was shown | Until you change them |
+| `~/.cache/senti/lang.pref`, `model.pref` | The language and speech model you picked in the menu | Until you change them |
+| `~/.config/senti/config.local.sh`, `snippets.txt`, `replacements.txt`, `brain-map.txt` | Your own settings, snippets, dictionary and note mappings | Until you remove them |
 | `~/.cache/senti/capture.wav`, `screen.png`, `screen-small.jpg`, `selection.txt`, `ctx-*` | The audio, screenshot, selected text and prepared context of the current turn. `ctx-shot.jpg` is the screenshot shrunk at key-down | Deleted at the end of each turn, when Senti starts, and every 60 seconds while it is idle |
 | `~/.cache/senti/brain/notion-<page id>.txt` | The digest of a mapped Notion page, after the rules above (never the whole page). Mode 600 | Reused for 10 minutes (`WF_NOTION_TTL_MIN`), then deleted at the next read, the next right ⌘ press, or the session sweep at launch and every 30 minutes. All are deleted once Notion is turned off |
 | `~/.cache/senti/sessions/<window>.tsv` | Session memory: Prompt, Command and Context turns, 200 characters each, at most 12 per window. Mode 600 | Turns older than 24 hours are never recalled. Files are deleted 24 hours after their last turn, at launch and every 30 minutes while Senti runs |
@@ -146,7 +158,7 @@ target model's name, never the text. Dictation never writes to it.
 
 ## Turning things off
 
-- **Notes:** leave `WF_BRAIN` unset, or set `WF_BRAIN=0`, in `~/.config/senti/config.sh`.
+- **Notes:** leave `WF_BRAIN` unset, or set `WF_BRAIN=0`, in `~/.config/senti/config.local.sh`.
   `WF_BRAIN_RETRIEVE=0` keeps the main note and turns off the retrieved one.
 - **Notion:** leave `WF_BRAIN_NOTION` unset, or set it to 0. Remove the token with
   `bash ~/.config/senti/senti-key.sh clear notion`.

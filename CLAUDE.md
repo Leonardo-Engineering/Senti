@@ -147,7 +147,9 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 | `senti-brain.sh` | notes → capped digests through ONE gate: Obsidian hub (default), `--retrieve`, `--notion`; `--preview` shows what would be sent |
 | `senti-eval.sh` | eval harness over `eval/cases.txt`; `ab <A> <B>` with a base-vs-base row |
 | `senti-selftest.sh` | the full check suite — run before believing anything works |
-| `senti-model.sh` | Fast/Accurate whisper model switch |
+| `senti-model.sh` | speech model switch (Accurate, Fast, Parakeet) and the language (`lang <code|auto>`) |
+| `senti-config.sh` | installs the shipped `config.sh` and carries user settings into `config.local.sh` |
+| `senti-serve.sh` | the launchd entry point of the warm whisper server |
 | `app/make-icon.sh` | SVG → resvg → iconutil (no Pillow, no Python) |
 | `tools/models-watch.py` (repo only) | weekly check (GitHub Action `models-watch.yml`): registry and `prompts/models` against OpenRouter's public list; opens an issue, edits nothing. Update procedure: CONTRIBUTING.md, "Keeping the model knowledge current" |
 | `uninstall.sh` (repo only) | asks, then removes the LaunchAgent, restores `init.lua`, removes app, cache, logs; asks again for keys and models |
@@ -232,6 +234,20 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
   extra API call) to a knowledge file in `prompts/models/` and injects only that file's
   `## Inject` digest (~900B). Injecting the full research prose instead cost 4.5KB and
   pushed prompt mode to 9.9s — keep the digests small.
+- **Per-model sections (15 Nov 2026):** models of ONE family prompt differently (OpenAI's GPT-6 guide is
+  written from gpt-6-astra and says guidance that helps Sol or Luna may overconstrain it; Anthropic has a
+  page per model; Sonnet 5.5 and Haiku 5.5 want a verification line that Opus should not get). Each file
+  ends with `## Model: <id>` sections (about 1 to 1.5 KB each, 20 today) written ONLY from that lab's own
+  pages (research reports in `.claude/tmp/team/kb-*-report.md`). Which one is injected: Claude Code's
+  transcript (`cc_model`), Codex's `~/.codex/config.toml` top-level `model` key (`codex_model`, only when
+  Codex is in front, value charset-checked), else the section whose `app: <regex>` line matches the app
+  name or window title (`app_model`: ChatGPT is gpt-6-sol, Codex gpt-6.1-sol, Gemini gemini-4-hydrogen).
+  The `app:` line is never injected. DeepSeek and MiniMax publish no prompting guide; their sections hold
+  only what their API pages state. `tools/models-watch.py` reports any listed model without a section.
+  Eval (15 Nov 2026, `senti-eval.sh ab oldkb base`, old knowledge against new on the new resolver): 8 ChatGPT
+  cases 10-8-6 against a noise row of 6-8-10; the 19-case set 20-18-19 against 20-19-18. No measurable change
+  either way on this judge (it sees the idea and the destination, not the model's guide). Shipped for
+  correctness, not for a measured gain; do not cite it as an improvement.
 - **Prompt intelligence:** one call, context-heavy. Both prompt paths assemble: shared craft
   (`prompts/prompt-craft.md`) + vault digest (`senti-brain.sh`) + session memory
   (`senti-session.sh`) + target-model guidance (`senti-target.sh`). Best mode was DELETED
@@ -444,4 +460,3 @@ hold-to-talk feels dead, check `wf.diag()` for the eventtap first.
 - User-facing: `README.md`. Go-to-market, pricing, and roadmap are deliberately NOT in
   this repo — they live in the private vault (`Efforts/Active/Senti/`). If you find
   yourself writing strategy here, that's the signal it belongs there instead.
-- Claude memory: `whisper-flow-local-dictation-2026-07-03.md` (has the full audited state).

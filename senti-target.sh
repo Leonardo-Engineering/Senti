@@ -5,7 +5,8 @@
 #   $1 = hint (frontmost app name from Hammerspoon, e.g. "Claude", "ChatGPT", "Cursor")
 #
 # Prints the guidance block to inject, or nothing if there's no useful match.
-# Resolution order: explicit menu-bar choice → frontmost-app match → universal only.
+# Resolution order: target.pref (a manual escape hatch; no menu writes it) → frontmost-app
+# match → universal only.
 #
 # Detection is free: the frontmost app name is a local, instant signal, so this
 # costs no extra API call and no latency. The knowledge base lives in
@@ -114,8 +115,56 @@ cc_model() {
 }
 
 # Pull a per-model delta out of the KB file: "## Model: <id>" ... up to the next "## ".
+# A section may open with an "app: <regex>" line (see app_model); that line is never injected.
 model_section() {
-  /usr/bin/perl -0777 -ne "print \$1 if /^## Model: \Q$2\E\s*\n(.*?)(?=^## |\z)/ms" "$1" 2>/dev/null
+  /usr/bin/perl -0777 -ne "if (/^## Model: \Q$2\E\s*\n(.*?)(?=^## |\z)/ms) { my \$b = \$1; \$b =~ s/\A\s*app:[^\n]*\n//; print \$b }" "$1" 2>/dev/null
+}
+
+# Which model an APP runs, when nothing on disk says so. Models in one family are prompted
+# differently (gpt-6-astra wants the goal and no recipe, gpt-6-luna wants the exact output
+# shape), so "ChatGPT" has to resolve to the model ChatGPT actually runs. A model section
+# can name the app that runs it:
+#     ## Model: gpt-6-sol
+#     app: chatgpt
+# The first section whose regex matches the frontmost app's name, then the window title,
+# wins. The probe reaches grep on stdin and the regex comes from the KB, so no window title
+# is ever on a command line.
+app_model() {
+  local file="$1" probe id rx
+  for probe in "$HINT" "$TITLE"; do
+    [ -n "$probe" ] || continue
+    while IFS='|' read -r id rx; do
+      [ -n "$id" ] && [ -n "$rx" ] || continue
+      if printf '%s' "$probe" | /usr/bin/grep -qiE "$rx"; then printf '%s' "$id"; return 0; fi
+    done <<EOF
+$(/usr/bin/perl -0777 -ne 'while (/^## Model: (\S+)\s*\n\s*app:\s*([^\n]+)/mg) { print "$1|$2\n" }' "$file" 2>/dev/null)
+EOF
+  done
+  return 0
+}
+
+# Codex (the CLI, the IDE extension and the ChatGPT desktop app's Codex) keeps its model in
+# ~/.codex/config.toml as a top-level `model = "..."` line (OpenAI's config reference, read
+# 15 Nov 2026). Read only when Codex is the app in front, only that one key, with builtins.
+# No key there means Codex picks its own default, which the KB's "app: codex" section names.
+codex_model() {
+  local probe hit="" line v f="$HOME/.codex/config.toml"
+  for probe in "$HINT" "$TITLE"; do
+    case "$probe" in *[Cc]odex*) hit=1 ;; esac
+  done
+  [ -n "$hit" ] && [ -f "$f" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      \[*) break ;;                                   # a [table]: top-level keys are over
+      model*=*)
+        v="${line#*=}"; v="${v#"${v%%[![:space:]]*}"}"; v="${v%%#*}"; v="${v%"${v##*[![:space:]]}"}"
+        v="${v#\"}"; v="${v%\"}"; v="${v#\'}"; v="${v%\'}"
+        case "${line%%=*}" in model|"model "|"model	") ;; *) continue ;; esac
+        case "$v" in ''|*[!A-Za-z0-9._-]*) return 0 ;; esac
+        printf '%s' "$v"; return 0 ;;
+    esac
+  done < "$f"
+  return 0
 }
 
 # Universal technique guidance always applies; model-specific stacks on top.
@@ -125,7 +174,14 @@ OUT=""
 
 if [ -n "$CHOSEN" ]; then
   NAME="$(fm "$CHOSEN" display_name)"
-  MODEL="$(cc_model)"
+  # The exact model: a file on disk that names it (Claude Code's transcript, Codex's config),
+  # else the model the app in front is known to run (the KB's "app:" lines).
+  case "$(fm "$CHOSEN" family)" in
+    anthropic) MODEL="$(cc_model)" ;;
+    openai)    MODEL="$(codex_model)" ;;
+    *)         MODEL="" ;;
+  esac
+  [ -n "$MODEL" ] || MODEL="$(app_model "$CHOSEN")"
   DELTA=""
   [ -n "$MODEL" ] && DELTA="$(model_section "$CHOSEN" "$MODEL")"
   if [ -n "${DELTA// /}" ]; then

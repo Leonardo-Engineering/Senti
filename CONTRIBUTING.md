@@ -12,7 +12,8 @@ This repository is the source. `./install.sh` copies it into place:
 
 | Repository | Installed to |
 |---|---|
-| `senti-*.sh`, `config.sh`, `ai-models.json`, `replacements.txt`, `prompts/`, `eval/` | `~/.config/senti/` |
+| `senti-*.sh`, `config.sh`, `ai-models.json`, `prompts/`, `eval/` | `~/.config/senti/` |
+| `replacements.txt`, `snippets.txt`, `brain-map.txt` | `~/.config/senti/`, only when missing (they are yours to edit) |
 | `senti.lua` | `~/.hammerspoon/init.lua` |
 | `io.senti.server.plist` | `~/Library/LaunchAgents/` |
 | `app/` | `~/Applications/Senti.app` |

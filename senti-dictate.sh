@@ -4,6 +4,7 @@
 #   stop    — finish recording, transcribe, print cleaned text to stdout
 #   toggle  — stop if recording, else start  (used by hands-free hotkey)
 #   cancel  — abort recording, transcribe nothing
+#   mictest — record 1.2 s and report the peak (the menu's microphone test)
 #   status  — "recording" | "idle"
 #   server  — "up" | "down"
 # Hold-to-talk = start on key-down, stop on key-up. Toggle = tap to start/stop.
@@ -419,5 +420,5 @@ case "${1:-}" in
   cancel) finish_recording; reap_orphans; is_recording || rm -f "$WF_AUDIO"; log "cancelled" ;;
   status) is_recording && echo recording || echo idle ;;
   server) server_up && echo up || echo down ;;
-  *) echo "usage: senti-dictate.sh {start|stop|toggle|cancel|status|server}" >&2; exit 1 ;;
+  *) echo "usage: senti-dictate.sh {start|stop|toggle|cancel|status|server|mictest}" >&2; exit 1 ;;
 esac

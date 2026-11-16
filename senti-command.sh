@@ -1,6 +1,7 @@
 #!/bin/bash
-# Command Mode: apply a spoken instruction to the currently-selected text (or, if
-# nothing is selected, generate text for the cursor) via senti-ai.sh (gpt-6-luna).
+# Command Mode: apply a spoken instruction to the currently-selected text via senti-ai.sh
+# (the provider and model the user chose). With nothing selected senti.lua runs the Prompt
+# path instead, so the no-selection branch here is reached only when this script is run by hand.
 #   $1 = the spoken command (transcribed)
 #   $2 = path to a file containing the selected text (may be empty/absent)
 # Prints ONLY the text to insert. If the AI call fails it prints nothing and exits with

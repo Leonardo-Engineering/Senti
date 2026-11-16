@@ -121,6 +121,8 @@ Each line names the code that does it, so you can check it.
 - Tools come from Homebrew: `whisper-cpp`, `sox`, `resvg` and the Hammerspoon cask. Senti does not
   vendor any third-party code.
 - The default speech model comes from Hugging Face and is checked against a SHA-256 in `install.sh`.
+  The 2 optional models (`base.en` and Parakeet) are downloads you make yourself and no code checks
+  them; the README gives Parakeet's SHA-256 to compare by hand.
 - At run time Senti calls only the AI provider you chose: when you use an AI mode, and when it checks
   a key (`senti-key.sh test`), which reads the provider's free model or key list. The self-test and
   the eval scripts call the same provider when you run them. With the Notion source on, it also calls

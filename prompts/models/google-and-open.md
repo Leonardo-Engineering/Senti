@@ -1,25 +1,31 @@
 ---
 family: google-open
-display_name: Google Gemini & open-weight models
-match: gemini|vertex|aistudio|ai studio|notebooklm|llama|mistral|qwen|deepseek|gemma|ollama|lm studio
-frontier: gemini-3.1-pro-preview
-daily: gemini-3.6-flash
-updated: 2026-08-09
+display_name: Google Gemini and other labs' models
+match: gemini|vertex|aistudio|ai studio|notebooklm|llama|mistral|le chat|qwen|tongyi|deepseek|gemma|ollama|lm studio|grok|kimi|moonshot|glm|zhipu|chatglm|minimax
+frontier: gemini-4-carbon
+daily: gemini-4-hydrogen
+updated: 2026-11-15
 ---
 
 ## Prompting rules
 
-1. **[Gemini]** Structure every prompt with one consistent delimiter convention — XML tags (`<role>`, `<context>`, `<task>`, `<constraints>`) or Markdown headers — and never mix the two in the same prompt. Gemini 3 is trained on this structure and is markedly less tolerant of unstructured prose than Gemini 2.5 was.
-2. **[Gemini]** For long-context prompts, put ALL reference material (documents, code, transcripts) first, then the specific question or instruction LAST, bridged with an explicit transition like "Based on the information above...". Google's own docs state this ordering directly; leading with the question and appending documents afterward measurably underperforms it.
-3. **[Gemini]** Don't expect chattiness by default — Gemini 3 "favors directness over persuasion and logic over verbosity" and gives terse, direct answers unless you explicitly ask for a conversational or detailed tone.
+(Checked against each lab's own pages on 15 Nov 2026. This file covers several labs, and they do not prompt alike:
+Kimi K3.1 always thinks at maximum effort, Mistral says never to make the model count words, Z.ai's examples ask
+for self-checks that Anthropic says to delete. The `## Model:` sections at the end are what Senti injects when it
+knows the model; the rules below are background. DeepSeek and MiniMax publish no prompting guide for their
+current models, so they have no section.)
+
+1. **[Gemini]** Structure a prompt with one consistent delimiter convention, XML tags or Markdown headings, and never mix the two in the same prompt. Google: "Choose one format and use it consistently within a single prompt."
+2. **[Gemini]** For long-context prompts, put all reference material first and the specific question last, bridged with a transition such as "Based on the information above...". Google states the ordering; it publishes no measurement.
+3. **[Gemini]** Do not expect chattiness by default. Google: "By default, Gemini 3 models provide direct and efficient answers." Ask explicitly for a conversational or detailed tone.
 4. **[Gemini]** Skip hand-written chain-of-thought scaffolding for routine calls. Gemini 2.5 and 3 models generate internal "thinking" automatically; add "think very hard before answering" only for genuinely hard problems, since it burns extra thinking tokens.
-5. **[Gemini]** Set the thinking-control param that matches the model generation and don't carry it across generations: Gemini 3.x uses `thinkingLevel` (`low`/`high`), Gemini 2.5.x uses `thinkingBudget` (a token count, or `-1` for dynamic). They are not interchangeable — sending the wrong one either 400s or silently no-ops.
+5. **[Gemini]** Thinking is set per model and the scale differs by model: gemini-3.8-flash takes low, medium and high (default medium); gemini-4-hydrogen defaults to high and has an xhigh tier. Do not carry a setting from one model to another.
 6. **[Gemini]** For a single image + text, place the text prompt BEFORE the image in the input array (confirmed in Google's own image-understanding docs) — this is the opposite of the "image first" convention common elsewhere. For multiple images, list them in order and reference that order explicitly in the text.
-7. **[Gemini]** Add an explicit current-date clause to the system instruction (e.g. "Remember it is 2026 this year") plus a knowledge-cutoff clause — Gemini 3 Flash needs this stated, not inferred, to reason correctly about recency and to formulate correct tool/search queries.
-8. **[Open-weight]** Never approximate a model's chat template. Control tokens are family-specific and non-interchangeable: Gemma uses `<start_of_turn>user ... <end_of_turn>`, Llama has no special pre-assistant token, Mistral wraps instructions in `[INST]...[/INST]`, Qwen/DeepSeek use ChatML-style `<|im_start|>`/`<|im_end|>`. A close-but-wrong template degrades instruction-following silently — no error, just worse output.
-9. **[Open-weight]** Check system-role support per family before assuming it exists. Gemma 3 and Gemma 4 both reject a system role entirely — fold system-level instructions into the start of the first user turn. Llama, Mistral, Qwen, and DeepSeek all support a real system role.
-10. **[Open-weight, reasoning variants]** Don't default to a generic "You are a helpful assistant" system prompt on a reasoning/thinking-mode model. DeepSeek's own team found this exact line measurably *hurts* DeepSeek-V3.2/V4 thinking-mode performance; leave the system prompt empty or task-specific for reasoning-mode calls instead of reusing a chat-mode persona line.
-11. **[Open-weight, Qwen]** Toggle Qwen3/3.5/3.6 reasoning explicitly: `enable_thinking` (true/false) is the hard switch at request time; `/think` and `/no_think` inline in the prompt is the soft switch that persists turn-to-turn until overridden. Don't assume a default — hybrid models can silently burn a full thinking pass on a simple turn if you never disable it.
+7. **[Gemini]** Google's "Gemini 3 Flash strategies" ask for the current date and the knowledge cutoff in the system instruction. No page extends this to gemini-3.8-flash or gemini-4-hydrogen, so add it only when recency matters.
+8. **[Open-weight]** Never approximate a model's chat template; control tokens are family-specific. Gemma 1 to 3 use `<start_of_turn>user ... <end_of_turn>`; Gemma 4 uses new `<|turn>` tokens with a system token. DeepSeek V4.1 ships its own encoding reference and no Jinja template. Use the template the runtime ships.
+9. **[Open-weight]** Check system-role support per family. Gemma 1 to 3 reject a system role (fold it into the first user turn); Gemma 4 supports one natively. Llama, Mistral, Qwen and DeepSeek support a system role.
+10. **[Open-weight, reasoning variants]** DeepSeek publishes no prompting guide for V4.1. Its own quickstart sends a short generic system message with thinking on, so an earlier claim here that such a line hurts thinking mode has no first-party support and was removed (15 Nov 2026).
+11. **[Open-weight, Qwen]** qwen3.8-omni-flash is controlled with `reasoning_effort` (default xhigh; `none` turns thinking off). `enable_thinking` and the `/think`, `/no_think` switches belong to older Qwen3 models.
 12. **[Open-weight, quantization]** Below Q4 GGUF quantization (Q2/Q3), expect degraded instruction-following specifically on agentic/structured tasks — models start dropping parts of multi-step system prompts and malforming JSON. If a local model ignores format instructions it previously followed, check the quant level before rewriting the prompt.
 13. **[Cross-vendor]** Shrink the prompt itself when moving from a frontier model to a small (≤30B) local model: one task per call instead of a multi-part composite, concrete examples of the specific failure modes you've actually seen (not generic examples), and a simpler, tighter output schema. Prompts tuned against a frontier model's tolerances reliably regress on small models — do an explicit small-model pass, don't just reuse the frontier prompt.
 14. **[Cross-vendor]** Don't chain multi-step reasoning ("first do X, then verify, then reformat") into one call to a small non-reasoning open-weight model. Split it into separate calls/turns — small models lose track of multi-step instructions in a single pass that a frontier or dedicated reasoning model holds fine.
@@ -105,6 +111,76 @@ Matching call shape: correct chat template for the family applied via `apply_cha
 
 ## Sources
 
+Read 15 Nov 2026 (each lab's own pages), for the check above and the model sections:
+
+- https://ai.google.dev/gemini-api/docs/prompting-strategies
+- https://aistudio.google.com/docs/prompting-strategies
+- https://ai.google.dev/gemini-api/docs/models
+- https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash
+- https://ai.google.dev/gemini-api/docs/models/gemini-4-argon
+- https://aistudio.google.com/docs/whats-new-gemini-3.8
+- https://aistudio.google.com/docs/whats-new-gemini-4-hydrogen
+- https://aistudio.google.com/docs/models/gemini-4-hydrogen
+- https://aistudio.google.com/docs/thinking
+- https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/guides/gemini-4-hydrogen
+- https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/4-hydrogen
+- https://cloud.google.com/vertex-ai/generative-ai/docs/start/gemini-3-prompting-guide
+- https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-hydrogen
+- https://deepmind.google/models/model-cards/gemini-4-hydrogen
+- https://ai.google.dev/gemini-api/docs/image-understanding
+- https://geminicli.com/docs/reference/configuration
+- https://geminicli.com/docs/cli/model
+- https://geminicli.com/docs/cli/model-routing
+- https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/configuration.md
+- https://support.google.com/gemini/answer/18648722
+- https://ai.google.dev/gemma/docs/core/model_card_4
+- https://ai.google.dev/gemma/docs/core/prompt-structure
+- https://ai.google.dev/gemma/docs/core/prompt-formatting-gemma4
+- https://docs.x.ai/llms.txt
+- https://docs.x.ai/developers/grok-4-7
+- https://docs.x.ai/developers/models/grok-4-7
+- https://docs.x.ai/developers/model-capabilities/text/reasoning
+- https://docs.x.ai/developers/model-capabilities/text/best-practices
+- https://docs.x.ai/developers/release-notes
+- https://platform.kimi.ai/docs/guide/prompt-best-practice
+- https://platform.kimi.ai/docs/guide/kimi-k3-1-pro-quickstart
+- https://platform.kimi.ai/docs/guide/use-thinking-models
+- https://platform.kimi.ai/docs/guide/use-reasoning-effort
+- https://platform.kimi.ai/docs/api/models-overview
+- https://platform.kimi.ai/docs/models
+- https://platform.kimi.ai/docs/guide/use-partial-mode-feature-of-kimi-api
+- https://platform.kimi.ai/docs/guide/benchmark-best-practice
+- https://docs.mistral.ai/guides/prompting_capabilities
+- https://docs.mistral.ai/studio/conversations/reasoning
+- https://docs.mistral.ai/models/mistral-large
+- https://docs.mistral.ai/getting-started/models/models_overview
+- https://huggingface.co/mistralai/Mistral-Large-4-1T-A52B
+- https://mistral.ai/news/mistral-large-4-oss
+- https://www.alibabacloud.com/help/en/model-studio/qwen-omni
+- https://www.alibabacloud.com/help/en/model-studio/qwen3-8-omni-flash
+- https://www.alibabacloud.com/help/en/model-studio/prompt-engineering-guide
+- https://www.alibabacloud.com/help/en/model-studio/deep-thinking
+- https://qwen.ai/blog?id=qwen3.8-omni-flash
+- https://api-docs.deepseek.com/
+- https://api-docs.deepseek.com/guides/thinking_mode
+- https://api-docs.deepseek.com/quick_start/pricing
+- https://api-docs.deepseek.com/updates
+- https://api-docs.deepseek.com/api/create-chat-completion
+- https://api-docs.deepseek.com/prompt-library
+- https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash
+- https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017
+- https://docs.z.ai/llms.txt
+- https://docs.z.ai/guides/vlm/glm-5.3-flash
+- https://docs.z.ai/guides/overview/overview
+- https://docs.bigmodel.cn/cn/guide/platform/prompt
+- https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash
+- https://platform.minimax.io/docs/llms.txt
+- https://platform.minimax.io/docs/guides/text-generation
+- https://platform.minimax.io/docs/api-reference/text-openai-api
+- https://platform.minimax.io/docs/guides/text-m3-function-call
+
+Earlier research (August 2026):
+
 - https://ai.google.dev/gemini-api/docs/prompting-strategies
 - https://ai.google.dev/gemini-api/docs/thinking
 - https://ai.google.dev/gemini-api/docs/models
@@ -148,3 +224,102 @@ Matching call shape: correct chat template for the family applied via `apply_cha
 - Gemini 3 answers tersely by default — explicitly ask for depth or a conversational tone if you want it.
 - Small/local open-weight models: one task per call, a simpler output schema, and concrete examples of the real failure mode. Don't reuse a frontier-tuned prompt verbatim.
 - Don't chain multi-step reasoning into one call to a small non-reasoning model — split it into separate steps.
+
+## Model: gemini-3.8-flash
+
+Google's current Flash model, a Gemini 3 model with thinking on by default at `medium` (Gemini API docs, read 15 Nov 2026). Google's Gemini 3 prompting guidance applies to it. When the prompt is going here:
+
+- **Pick a single structure and keep it.** Google recommends XML-style tags or Markdown headings, chosen once and used consistently within the prompt.
+- **Put role and output format at the top and the "do not" rules last.** Google places persona, core constraints and format first, and its Gemini 3 guide warns that negative and length limits placed early can be dropped on complex requests.
+- **Give long material first and the question last.** Google asks for all context up front and the specific question at the very end, bridged with "Based on the information above...".
+- **Ask for depth or a conversational tone in words.** Gemini 3 answers directly by default, and only an explicit request makes it longer or chattier.
+- **Check that a persona cannot conflict with the task.** Gemini 3 takes an assigned persona seriously and can ignore instructions to stay in it.
+- **Include a few examples in a consistent format.** Google recommends few-shot examples in every prompt, formatted identically, and warns that too many make the model overfit.
+
+## Model: gemini-4-hydrogen
+app: gemini|ai studio|aistudio|vertex|notebooklm
+
+Google's newest model, released 12 Nov 2026: Gemini 4 built for fast coding and agent work, thinking on by default at `high` (Google AI Studio and Cloud docs, read 15 Nov 2026). Google has not published prompting guidance specific to it; these points come from its Hydrogen pages and Google's general prompting page. When the prompt is going here:
+
+- **Give it the context it needs.** Google reports it flags missing context instead of guessing, with 5x fewer fabricated claims than Gemini 3.8 Flash.
+- **Ask for tool use through declared tools, not raw JSON text.** Google warns that telling it to write JSON tool calls with no declared tools can fail with a malformed call.
+- **Put stable material first.** Its cache matches shared prompt prefixes of 4,096 tokens or more, so static content belongs at the start.
+- **Don't write the opening of its answer for it.** Prefilled model turns are not supported.
+- **Include a few consistent examples.** Google's general prompting page recommends few-shot examples in every prompt.
+- **Ask it to think less when the output is long and simple.** Google's thinking guide suggests this to save tokens, and its deepest level can overthink simple prompts.
+
+## Model: grok-4.7
+app: grok
+
+xAI's flagship, reasoning always on at `high` by default, knowledge cutoff May 2026 (xAI docs, read 15 Nov 2026). xAI has no prompting guide for text; its Best Practices Guide has a single paragraph on prompts. When the prompt is going here:
+
+- **State the task, the constraints and the output format directly.** xAI says this is how to prompt its reasoning models, which reason before they answer.
+- **Re-tune a prompt written for another model.** xAI asks for comparable tuning effort on Grok before comparing results.
+- **Give the date and the facts for anything after May 2026.** Grok knows nothing past its training data unless search tools are on.
+- **Put stable material first.** System prompts, examples and reference documents at the start form a prefix every turn can reuse.
+
+## Model: kimi-k3.1-pro
+app: kimi|moonshot
+
+Moonshot's flagship, thinking always on, effort defaulting to `max` (Kimi API docs, read 15 Nov 2026). Moonshot's prompt guide is general, not written for this model. When the prompt is going here:
+
+- **Include every detail and piece of context that matters.** Moonshot's guide says the less the model has to guess, the better the result.
+- **Separate the parts with delimiters.** Triple quotes, XML tags or section headings tell it which text needs different handling.
+- **Spell out the steps of the task.** Moonshot says explicit steps make the task easier to follow and improve the output.
+- **Ask for length in paragraphs or bullet points, not words.** The model hits paragraph and bullet counts more reliably than word counts.
+- **Point it at the reference text and say what to do when the answer is absent.** Moonshot's example has the model answer from the provided article and say so when the answer is not there.
+- **Write in English or Chinese.** Moonshot's own sample system prompt describes Kimi as most proficient in Chinese and English.
+
+## Model: mistral-large-4-0
+app: mistral|le chat
+
+Mistral's largest model, open weight, reasoning effort `low`, `medium` or `high` with `high` as default (Mistral docs and model card, read 15 Nov 2026). When the prompt is going here:
+
+- **Open with a role and a task.** Mistral recommends starting with "You are a <role>, your task is to <task>."
+- **Organize the prompt in sections and write for a reader with no context.** Mistral's rule of thumb is that someone with no prior context should be able to do the task from the prompt alone.
+- **Describe the environment and the use case.** The model card asks system prompts to set a clear environment and use case, including how to use any tools.
+- **Replace vague words with measures.** Mistral lists "too long", "many", "interesting" and "better" as words to avoid and asks for objective measures.
+- **Turn overlapping rules into a decision tree.** Long prompts collect slight contradictions, and Mistral's fix is an ordered if/otherwise list.
+- **Use a worded scale for ratings, and give counts instead of asking for them.** Mistral reports better results with labeled scales and asks for character counts to be passed as input rather than computed by the model.
+
+## Model: qwen3.8-omni-flash
+app: qwen|tongyi
+
+Alibaba's model for audio and video understanding with text output, thinking on by default at `xhigh` (Model Studio docs, read 15 Nov 2026). Model Studio's general text prompt guide applies; its model-specific prompts are for audio and video analysis. When the prompt is going here:
+
+- **Structure the prompt in labeled sections, including style, tone and audience.** Model Studio's framework asks for context, objective, style, tone, audience and response format, each under a hash-marked heading.
+- **Separate blocks with rare symbol sequences.** Model Studio suggests markers such as ###, === or >>> that cannot be mistaken for ordinary text.
+- **Show an example of the output you want.** Examples let the model copy the format, grammar and tone and make repeated outputs more consistent.
+- **Put the instruction and the media in the same user message.** Alibaba's recommended prompts sit in a text item next to the audio or video they analyze.
+- **Spell out JSON fields and rules in the prompt.** This model has no JSON Schema mode, so field constraints must be written into the prompt.
+- **For audio or video descriptions, ask for evidence only.** Alibaba's recommended prompts tell the model to include only what the media supports and to invent nothing.
+
+## Model: glm-5.3-flash
+app: glm|zhipu|chatglm|z\.ai
+
+Z.ai's native multimodal GLM-5 model, thinking always on, recommended `reasoning_effort: max` (Z.ai docs, read 15 Nov 2026). Z.ai's English docs have no prompting guide; these points come from its model page and its Chinese platform's general prompt guide. When the prompt is going here:
+
+- **Name the deliverable, the audience and the format.** Z.ai's example prompts specify audience, page count, structure and visual style, then ask for a ready-to-use file.
+- **Ask it to check its output against the reference and fix the differences.** Z.ai's example prompts have it render the result, compare it with the reference images and keep refining.
+- **End with a request for a coverage report.** Z.ai's examples close by asking what was covered, how to run the result and what gaps remain.
+- **Separate input parts with delimiters.** Zhipu's guide marks quoted material off with triple quotes.
+- **Give a length limit, not an exact word count.** Zhipu's guide notes the model cannot hit a specific word count precisely.
+
+## Model: deepseek-v4.1-flash
+app: deepseek
+
+DeepSeek publishes no prompting guide for this model; these are only what its API pages state
+(api-docs.deepseek.com, read 15 Nov 2026). When the prompt is going here:
+
+- **Do not write a reasoning scaffold.** Thinking is on by default at high effort, so "think step by step" adds nothing.
+- **Restate what matters from earlier turns.** In plain chat its earlier reasoning is not carried into the next turn.
+- **State the task, the constraints and the output format plainly.** With no vendor guidance, the general rules apply.
+
+## Model: minimax-m3.1-flash
+app: minimax
+
+MiniMax publishes no prompting guide for this model; these are only what its API pages state
+(platform.minimax.io, read 15 Nov 2026). When the prompt is going here:
+
+- **Do not write a reasoning scaffold.** Thinking is on by default and cannot be switched off.
+- **State the task, the constraints and the output format plainly.** With no vendor guidance, the general rules apply.

@@ -585,6 +585,22 @@ for APPNAME in "Google Chrome" "Safari" "Arc" "Brave Browser" "Microsoft Edge" "
 done
 [ -z "$HIJACK" ] && ok "no browser/terminal app NAME hijacks a model family (13 probed)" \
                   || bad "KB match regex claims an app name:$HIJACK"
+# Models in one family are prompted differently, so an app resolves to the model it runs (the KB's
+# "app:" lines), and Codex to the model its own config names.
+tgt_for() { SENTI_SLABEL="${2:-}" bash "$CFG/senti-target.sh" "$1" 2>/dev/null; }
+TA="$(tgt_for ChatGPT)"; TB="$(tgt_for Codex)"; TC="$(tgt_for Gemini)"; TD="$(tgt_for "Google Chrome" "Kimi - Chrome")"
+case "$TA" in *"paste this prompt into: gpt-6-sol."*) case "$TB" in *"into: gpt-6.1-sol."*) case "$TC" in *"into: gemini-4-hydrogen."*) case "$TD" in *"into: kimi-k3.1-pro."*)
+  ok "an app resolves to the model it runs (ChatGPT gpt-6-sol, Codex gpt-6.1-sol, Gemini gemini-4-hydrogen, a Kimi tab kimi-k3.1-pro)" ;; *) bad "a Kimi browser tab did not resolve to kimi-k3.1-pro" ;; esac ;; *) bad "Gemini did not resolve to gemini-4-hydrogen" ;; esac ;; *) bad "Codex did not resolve to gpt-6.1-sol" ;; esac ;; *) bad "ChatGPT did not resolve to gpt-6-sol" ;; esac
+case "$TA$TB$TC$TD" in *"app: "*) bad "an 'app:' line from the KB was injected into a prompt" ;; *) ok "the KB's 'app:' lines are never injected" ;; esac
+[ "$TA" != "$TB" ] && ok "ChatGPT and Codex get different guidance (2 models of one family)" || bad "ChatGPT and Codex got the same guidance"
+mkdir -p "$HOME/.codex"
+printf '# my codex config\nmodel = "gpt-6-astra"   # the big one\nmodel_reasoning_effort = "low"\n[profiles.x]\nmodel = "gpt-6-luna"\n' > "$HOME/.codex/config.toml"
+TE="$(tgt_for Codex)"; TF="$(tgt_for ChatGPT)"
+case "$TE" in *"into: gpt-6-astra."*) case "$TF" in *"into: gpt-6-sol."*) ok "Codex's own config names its model (top-level model key only), and it is read only for Codex" ;; *) bad "Codex's config changed what ChatGPT resolves to" ;; esac ;; *) bad "Codex's config.toml model was not used: $(printf '%s' "$TE" | /usr/bin/grep -o 'into: [^.]*' | /usr/bin/head -1)" ;; esac
+printf 'model = "x; touch %s/pwned-codex"\n' "$HOME" > "$HOME/.codex/config.toml"
+TG="$(tgt_for Codex)"
+case "$TG" in *"into: gpt-6.1-sol."*) [ ! -e "$HOME/pwned-codex" ] && ok "a malformed model in Codex's config is ignored (falls back to Codex's default), never executed" || bad "Codex config value was executed" ;; *) bad "malformed Codex config gave: $(printf '%s' "$TG" | /usr/bin/grep -o 'into: [^.]*' | /usr/bin/head -1)" ;; esac
+/bin/rm -rf "$HOME/.codex"
 # Claude Code's transcript names the exact model: a section must exist for today's ids,
 # and an id newer than the KB falls back to its predecessor, logged.
 mkdir -p "$SB/.claude/projects/-x-code-selftestproj"
@@ -607,6 +623,9 @@ for TTL in "$TCAN" "${TCAN}Miss"; do
   SENTI_SLABEL="$TTL — secret task — claude" bash -x "$CFG/senti-target.sh" Terminal >/dev/null 2>"$SBT/target.xtrace"
   TX=$((TX + $(xargv "$SBT/target.xtrace" "$TTL")))
 done
+# the same for the app lookup, where the title is tested against the KB's "app:" regexes
+SENTI_SLABEL="$TCAN — secret task" bash -x "$CFG/senti-target.sh" "Google Chrome" >/dev/null 2>"$SBT/target.xtrace"
+TX=$((TX + $(xargv "$SBT/target.xtrace" "$TCAN")))
 [ "$TX" = 0 ] && ok "target resolver keeps the window title off every process's argv (match and no match)" \
               || bad "LEAK: the window title reached the argv of $TX command(s) in senti-target.sh"
 
