@@ -128,6 +128,8 @@ All notable changes to Senti. Dates are in US Eastern time.
   - A key-up that beats the recorder's start stops that recorder (it could keep the microphone open).
   - Ordinary words in a window title ("glm.hpp", "Minimax algorithm", "Grokking Algorithms", "Sonnet 18")
     no longer pick a model's guidance. A title two tabs share in Cyrillic or Chinese still counts as 2 windows.
+  - An empty answer from the model ("delete this" in Command mode) is no longer pasted as the literal
+    `<r></r>` tags. Command mode reports an empty answer; Prompt mode hands back your words.
   - Smaller: `brain-map.txt` parsing, a dry run that read keys, uninstall leaving an empty cache folder,
     a config backup that could be overwritten, very large selections, notices that named the wrong reason.
 - Family rules the labs' current pages no longer support were corrected or removed (effort defaults and

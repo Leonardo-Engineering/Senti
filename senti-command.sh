@@ -57,7 +57,9 @@ fi
 
 # Extract only what's between the sentinel tags (discards any stray preamble).
 RESULT="$(printf '%s' "$OUT" | /usr/bin/perl -0777 -ne 'my @o = /<r>/g; if (@o == 1) { print $1 if /<r>(.*)<\/r>/s } else { my @m = /<r>(.*?)<\/r>/sg; print $m[-1] if @m }')"   # see extract_r in senti-prompt.sh
-blank "$RESULT" && RESULT="$OUT"                 # fallback if the model omitted tags
+# Fallback only if the model omitted the tags. An EMPTY tagged answer ("delete this") used to fall
+# through here and paste the literal <r></r> over the selection; it now ends as an empty answer.
+case "$OUT" in *"<r>"*) : ;; *) blank "$RESULT" && RESULT="$OUT" ;; esac
 RESULT="$(printf '%s' "$RESULT" | /usr/bin/perl -0777 -pe 's/^\s+//; s/\s+$//')"
 blank "$RESULT" && exit 3
 printf '%s' "$RESULT"
