@@ -96,7 +96,8 @@ disappears. Things worth knowing:
   "Like,". `WF_REMOVE_FILLERS=0` in `config.local.sh` turns that off. Start and stop sounds:
   `WF_SOUNDS=0` silences them.
 - **Another dictation tool on the same keys.** Senti checks whether Wispr Flow is running and warns you,
-  because both listen on Fn and right ⌘.
+  because Wispr Flow's default dictation key is also Fn (on the Mac tested, its prompt shortcut also
+  answered right ⌘).
 
 The menu-bar icon holds the language, the speed setting (Accurate, Fast or Parakeet), the AI provider,
 key and model, a switch to mute other audio while recording, your snippets, permissions and an engine
@@ -168,7 +169,7 @@ Put your own settings in `~/.config/senti/config.local.sh`: `install.sh` never o
 Your `replacements.txt`, `snippets.txt`, `brain-map.txt` and eval cases are kept.
 
 The [Releases page](https://github.com/Leonardo-Engineering/Senti/releases/latest) has the same
-source. Release 1.0.0 has no attached files. When a release does attach a `SHA256SUMS` file, check
+source. Release 1.1.0 attaches `senti-1.1.0.tar.gz` and a `SHA256SUMS` file (1.0.0 has no attached files). Check
 your download in the folder you saved both files to:
 
 ```bash

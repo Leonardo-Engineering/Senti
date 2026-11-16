@@ -44,10 +44,11 @@ if [ -z "${WF_LANG:-}" ]; then
   WF_LANG="$_wf_lang"
   unset _wf_lang
 fi
-case "$WF_LANG" in
-  auto|[a-z][a-z]|[a-z][a-z][a-z]) ;;
-  *) WF_LANG="en" ;;
-esac
+# whisper.cpp's own language codes. A code it does not know ("eng", "zz", "pt-BR") makes the speech
+# server exit at start, and launchd restarts it forever, so anything else falls back to English.
+WF_LANG_CODES=" auto en zh de es ru ko fr ja pt tr pl ca nl ar sv it id hi fi vi he uk el ms cs ro da hu ta no th ur hr bg lt la mi ml cy sk te fa lv bn sr az sl kn et mk br eu is hy ne mn bs kk sq sw gl mr pa si km sn yo so af oc ka be tg sd gu am yi lo uz fo ht ps tk nn mt sa lb my bo tl mg as tt haw ln ha ba jw su yue "
+wf_lang_ok() { case "$1" in ''|*[!a-z]*) return 1 ;; esac; case "$WF_LANG_CODES" in *" $1 "*) return 0 ;; esac; return 1; }
+wf_lang_ok "$WF_LANG" || WF_LANG="en"
 
 # --- Model ---
 # Selected via the menu bar (Fast/Accurate); persisted in model.pref.
@@ -250,8 +251,5 @@ WF_TAIL_MS="${WF_TAIL_MS:-100}"
 [ -f "$HOME/.config/senti/config.local.sh" ] && . "$HOME/.config/senti/config.local.sh"
 # The language is checked again: this second read put back whatever the file says, and a value
 # whisper does not know ("pt-BR", "english") makes the speech server exit at start, forever.
-case "${WF_LANG:-en}" in
-  auto|[a-z][a-z]|[a-z][a-z][a-z]) ;;
-  *) WF_LANG="en" ;;
-esac
+wf_lang_ok "${WF_LANG:-}" || WF_LANG="en"   # an empty value too
 true

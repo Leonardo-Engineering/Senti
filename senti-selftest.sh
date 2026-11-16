@@ -1108,6 +1108,8 @@ LV="$(bash -c 'unset WF_LANG; . "$0/config.sh"; printf %s "$WF_LANG"' "$CFG")"; 
 [ "$LV" = "en" ] && ok "a language whisper does not know in config.local.sh falls back to English (the server would not start with it)" || bad "config.local.sh WF_LANG=pt-BR gave '$LV'"
 AUD="$(printf 'centi|Senti\n' > "$HOME/.cache/senti/ct-rules.txt"; WF_REPLACEMENTS="$HOME/.cache/senti/ct-rules.txt" bash -c 'eval "$(/usr/bin/sed -n "/^clean_text()/,/^}/p" "$0")"; printf "%s|%s|%s" "$(clean_text "Is that the right file, um?")" "$(clean_text "That is great, uh!")" "$(WF_LANG=fr clean_text "Au centième essai.")"' "$CFG/senti-dictate.sh" 2>/dev/null)"; /bin/rm -f "$HOME/.cache/senti/ct-rules.txt"
 [ "$AUD" = "Is that the right file?|That is great!|Au centième essai." ] && ok "a dropped filler hands back its ? or !, and a dictionary rule does not fire inside an accented word" || bad "clean_text audit cases gave '$AUD'"
+AUD2="$(printf 'senti|Senti\n' > "$HOME/.cache/senti/ct-rules.txt"; WF_REPLACEMENTS="$HOME/.cache/senti/ct-rules.txt" bash -c 'eval "$(/usr/bin/sed -n "/^clean_text()/,/^}/p" "$0")"; printf "%s|%s|%s" "$(WF_LANG=en clean_text "I said “senti” twice.")" "$(WF_LANG=es clean_text "¡senti funciona!")" "$(WF_LANG=en clean_text "I mean, uh?, yes")"' "$CFG/senti-dictate.sh" 2>/dev/null)"
+[ "$AUD2" = "I said “Senti” twice.|¡Senti funciona!|I mean, yes" ] && ok "a dictionary rule fires next to curly quotes and an inverted mark; a filler before a comma adds no question mark" || bad "clean_text (2) gave: $AUD2"
 SUT="$(SENTI_IN="$(/usr/bin/perl -e 'print "x" x 198, "\xe2\x80\x99tail"')" bash "$CFG/senti-session.sh" note "aud$$" "proj — t" prompt >/dev/null 2>&1; /bin/cat "$HOME"/.cache/senti/sessions/*aud$$* 2>/dev/null | /usr/bin/tail -1 | /usr/bin/cut -f3 | /usr/bin/perl -ne 'chomp; print((utf8::decode(my $c = $_)) ? "valid" : "broken")')"
 [ "$SUT" = "valid" ] && ok "a session turn cut at 200 bytes never ends in half a character" || bad "session note cut a multi-byte character ('$SUT')"
 /bin/rm -f "$HOME"/.cache/senti/sessions/*aud$$*
@@ -1306,6 +1308,16 @@ EC1="$(HOME="$EA" FAKE_OUT='<r></r>' SENTI_IN="delete this" bash "$EA/.config/se
 EC2="$(HOME="$EA" FAKE_OUT='<r>short text</r>' SENTI_IN="shorten" bash "$EA/.config/senti/senti-command.sh" "$EA/sel.txt" 2>/dev/null)"
 EC3="$(HOME="$EA" FAKE_OUT='plain answer' SENTI_IN="shorten" bash "$EA/.config/senti/senti-command.sh" "$EA/sel.txt" 2>/dev/null)"
 EP1="$(HOME="$EA" FAKE_OUT='<r></r>' SENTI_IN="my idea words" bash "$EA/.config/senti/senti-prompt.sh" 2>/dev/null)"
+EC4="$(HOME="$EA" FAKE_OUT='<r>an answer whose closing tag was cut' SENTI_IN="shorten" bash "$EA/.config/senti/senti-command.sh" "$EA/sel.txt" 2>/dev/null)"
+EP2="$(HOME="$EA" FAKE_OUT='<r>an answer whose closing tag was cut' SENTI_IN="my idea words" bash "$EA/.config/senti/senti-prompt.sh" 2>/dev/null)"
+[ "$EC4" = "an answer whose closing tag was cut" ] && [ "$EP2" = "$EC4" ] && ok "an answer whose closing tag was cut off is kept, not dropped" || bad "unclosed tag: command '$EC4', prompt '$EP2'"
+# The language: only codes whisper knows reach the server ("eng" and "zz" made it exit at start).
+LG=""; for v in eng zz pt-BR es yue auto ""; do LH="$(mktemp -d)"; mkdir -p "$LH/.config/senti" "$LH/.cache/senti"; /bin/cp "$CFG/config.sh" "$LH/.config/senti/"; printf 'WF_LANG=%s\n' "$v" > "$LH/.config/senti/config.local.sh"
+  LG="$LG $(HOME="$LH" bash -c 'source "$HOME/.config/senti/config.sh" 2>/dev/null; printf %s "$WF_LANG"')"; /bin/rm -rf "$LH"; done
+[ "$LG" = " en en en es yue auto en" ] && ok "a language code whisper does not know falls back to English (7 values)" || bad "language validation gave:$LG"
+# A model borrowed from the other kind must belong to the pinned provider.
+BM="$(SENTI_AI_DRYRUN=1 SENTI_IN=hi WF_AI_PROVIDER=openai WF_VISION_MODEL=openai/gpt-6-luna SENTI_PROVIDER= SENTI_MODEL= bash "$CFG/senti-ai.sh" 2>/dev/null | /usr/bin/grep -oE '"model": *"[^"]+"' | head -1)"
+case "$BM" in *'"gpt-6-luna"'*) ok "a pinned provider does not borrow another provider's model id" ;; *) bad "pinned openai with an OpenRouter vision pin sent: $BM" ;; esac
 if [ -z "$EC1" ] && [ "$EC1R" = 3 ] && [ "$EC2" = "short text" ] && [ "$EC3" = "plain answer" ] && [ "$EP1" = "my idea words" ]; then
   ok "an empty tagged answer is never pasted as tags (Command: empty answer; Prompt: your words)"
 else bad "empty tagged answer: command '$EC1' rc=$EC1R, tagged '$EC2', untagged '$EC3', prompt '$EP1'"; fi
@@ -1357,10 +1369,16 @@ if [ "$CI" = 1 ] && [ -f "$SRC/uninstall.sh" ]; then
   printf 'wf.armTap()\n' > "$UH/.hammerspoon/init.lua"
   printf 'mine\n' > "$UH/.hammerspoon/init.lua.pre-senti.20261001-120000"
   printf '#!/bin/bash\necho "$*" >> "%s/launchctl.log"\n' "$SBT" > "$SBT/ubin/launchctl"; chmod +x "$SBT/ubin/launchctl"
+  # `defaults` ignores HOME, so uninstall.sh must never reach the real one from a test: a stub for the
+  # run that checks the icons, nothing at all for the others, and the real value read before and after.
+  printf '#!/bin/bash\necho "$*" >> "%s/defaults.log"\n[ "$1" = read ] && echo 1\nexit 0\n' "$SBT" > "$SBT/ubin/defaults"; chmod +x "$SBT/ubin/defaults"
+  RD0="$(/usr/bin/defaults read org.hammerspoon.Hammerspoon MJShowMenuIconKey 2>/dev/null)|$(/usr/bin/defaults read org.hammerspoon.Hammerspoon MJShowDockIconKey 2>/dev/null)"
   B4="$(cd "$UH" && find . | sort)"
   printf 'n\n' | HOME="$UH" SENTI_LAUNCHCTL="$SBT/ubin/launchctl" bash "$SRC/uninstall.sh" >/dev/null 2>&1
   [ "$(cd "$UH" && find . | sort)" = "$B4" ] && [ ! -f "$SBT/launchctl.log" ] && ok "uninstall: answering n changes nothing" || bad "uninstall changed files on n"
-  printf 'y\nn\nn\n' | HOME="$UH" SENTI_LAUNCHCTL="$SBT/ubin/launchctl" bash "$SRC/uninstall.sh" >/dev/null 2>&1
+  UO1="$(printf 'y\nn\nn\n' | HOME="$UH" SENTI_LAUNCHCTL="$SBT/ubin/launchctl" SENTI_DEFAULTS="$SBT/ubin/defaults" bash "$SRC/uninstall.sh" 2>&1)"
+  DW="$(/usr/bin/grep -c '^write org.hammerspoon.Hammerspoon MJShow' "$SBT/defaults.log" 2>/dev/null)"
+  case "$UO1" in *"icons are back on"*) [ "$DW" = 2 ] && ok "uninstall turns Hammerspoon's 2 icon settings back on when Senti's config was in place (through the stub)" || bad "uninstall icon writes: $DW" ;; *) bad "uninstall did not report the icons" ;; esac
   [ ! -f "$UH/Library/LaunchAgents/io.senti.server.plist" ] && [ "$(cat "$UH/.hammerspoon/init.lua")" = mine ] && [ -d "$UH/.config/senti" ] \
     && ok "uninstall: y removes the LaunchAgent and restores the init.lua backup, keeps settings" || bad "uninstall y did not do its job"
   # The user replaced Senti's init.lua with their own config after installing: that newer
@@ -1368,7 +1386,9 @@ if [ "$CI" = 1 ] && [ -f "$SRC/uninstall.sh" ]; then
   UH2="$SBT/uh2"; mkdir -p "$UH2/.hammerspoon"
   printf 'newer own config\n' > "$UH2/.hammerspoon/init.lua"
   printf 'older backup\n' > "$UH2/.hammerspoon/init.lua.pre-senti.20261001-120000"
-  UO="$(printf 'y\nn\nn\n' | HOME="$UH2" SENTI_LAUNCHCTL="$SBT/ubin/launchctl" bash "$SRC/uninstall.sh" 2>&1)"
+  UO="$(printf 'y\nn\nn\n' | HOME="$UH2" SENTI_LAUNCHCTL="$SBT/ubin/launchctl" SENTI_DEFAULTS="$SBT/ubin/defaults" bash "$SRC/uninstall.sh" 2>&1)"
+  DW2="$(/usr/bin/grep -c '^write org.hammerspoon.Hammerspoon MJShow' "$SBT/defaults.log" 2>/dev/null)"
+  [ "$DW2" = "$DW" ] && ok "with someone else's Hammerspoon config, uninstall leaves the icon settings alone" || bad "uninstall wrote icon settings over a non-Senti config ($DW → $DW2)"
   [ "$(cat "$UH2/.hammerspoon/init.lua")" = "newer own config" ] && [ -f "$UH2/.hammerspoon/init.lua.pre-senti.20261001-120000" ] \
     && case "$UO" in *"init.lua.pre-senti.20261001-120000"*) true ;; *) false ;; esac \
     && ok "uninstall: a non-Senti init.lua is kept and the backup's path is printed" || bad "uninstall replaced a non-Senti init.lua"
@@ -1396,6 +1416,8 @@ if [ "$CI" = 1 ] && [ -f "$SRC/uninstall.sh" ]; then
   # With no pre-Senti backup nothing is restored, so the preview must not promise a saved copy.
   UH4="$SBT/uh4"; mkdir -p "$UH4/.hammerspoon"; printf 'wf.armTap()\n' > "$UH4/.hammerspoon/init.lua"
   UO="$(printf 'n\n' | HOME="$UH4" SENTI_LAUNCHCTL="$SBT/ubin/launchctl" bash "$SRC/uninstall.sh" 2>&1)"
+  RD1="$(/usr/bin/defaults read org.hammerspoon.Hammerspoon MJShowMenuIconKey 2>/dev/null)|$(/usr/bin/defaults read org.hammerspoon.Hammerspoon MJShowDockIconKey 2>/dev/null)"
+  [ "$RD0" = "$RD1" ] && ok "the uninstall tests leave the real Hammerspoon preferences alone" || bad "uninstall tests changed the real Hammerspoon preferences: $RD0 → $RD1"
   case "$UO" in *"saved first"*) bad "uninstall preview promises a saved init.lua copy when there is no backup" ;;
     *"no earlier init.lua backup"*) ok "uninstall preview says when there is no backup to restore" ;;
     *) bad "uninstall preview: no line about the Hammerspoon config" ;; esac

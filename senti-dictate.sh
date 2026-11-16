@@ -233,7 +233,7 @@ EOF
     local praw prc
     # 10 s, not 30: a hung parakeet-cli plus the whisper fallback's own budget (up to 44 s) used
     # to add up to about 76 s, past the app's 75 s limit, so the text arrived to an abandoned turn.
-    local pto="${WF_PARAKEET_TIMEOUT:-10}"; case "$pto" in ''|*[!0-9]*) pto=10 ;; esac
+    local pto="${WF_PARAKEET_TIMEOUT:-10}"; case "$pto" in ''|*[!0-9]*) pto=10 ;; esac; { [ "$pto" -ge 1 ] && [ "$pto" -le 30 ]; } || pto=10   # 0 would mean no limit
     praw="$(/usr/bin/perl -e 'alarm shift; exec @ARGV' "$pto" "$WF_PARAKEET_CLI" -m "$WF_PARAKEET_MODEL" -t 6 -np -f "$WF_AUDIO" 2>/dev/null)"
     prc=$?
     if [ "$prc" -eq 0 ] && [ -n "${praw//[[:space:]]/}" ]; then
@@ -343,7 +343,7 @@ clean_text() {
         my $tok = $w[$i]; my $base = lc $tok; my $p = "";
         $p = $1 if $base =~ /([.,!?;:]+)$/; $base =~ s/[.,!?;:]+$//;
         if ($en ? $base =~ /^(um+|uh+|uhm+|erm+|hmm+)$/ : $base =~ /^(uh+|uhm+|erm+|hmm+)$/) {
-          if ($p =~ /([.?!])/ && $out ne "" && $out !~ /[.!?]$/) { my $e = $1; $out =~ s/[,;:]+$//; $out .= $e; }
+          if ($p =~ /([.?!])$/ && $out ne "" && $out !~ /[.!?]$/) { my $e = $1; $out =~ s/[,;:]+$//; $out .= $e; }
           next;
         }
         next if $en && $i == 0 && $n > 2 && $p eq "," && $base =~ /^(so|okay|ok|well|like)$/;
@@ -358,7 +358,13 @@ clean_text() {
         my ($p, $r) = split(/\|/, $_, 2); s/^\s+|\s+$//g for $p, $r;
         next if $p eq "";   # an empty pattern re-uses the last match in perl
         push @rules, [$p, $r]; }
-      for my $ru (@rules) { my ($p, $r) = @$ru; $t =~ s/(?<![[:alnum:]\x80-\xff-])\Q$p\E(?![[:alnum:]\x80-\xff-])/$r/gi; }   # "-" is part of a word: no rule fires inside "centi-meter"
+      # Match on characters, not bytes: a letter or digit in any script (or "-") beside the match means
+      # it is inside a word ("centi-meter", "centième"); a curly quote, an ellipsis or an inverted
+      # exclamation mark is not a letter, so a rule still fires next to those.
+      my $dec = utf8::decode($t);
+      for my $ru (@rules) { my ($p, $r) = @$ru; if ($dec) { utf8::decode($p); utf8::decode($r); }
+        $t =~ s/(?<![\p{L}\p{N}-])\Q$p\E(?![\p{L}\p{N}-])/$r/gi; }
+      utf8::encode($t) if $dec;
     }
     print $t;' "$WF_REPLACEMENTS"
 }

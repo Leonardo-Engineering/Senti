@@ -41,7 +41,7 @@ On a heavy turn Senti adds:
 - **The window title's project and task**, for example the project and current task shown in a
   terminal's title.
 - **Session memory for this window**: your last Prompt, Command and Context turns in the same window,
-  up to 12 of them, 200 characters each, from the last 24 hours. Dictation turns are never stored, so
+  up to 12 of them, the first 200 bytes of each, from the same project and the last 24 hours. Dictation turns are never stored, so
   they can never be sent this way.
 - **Your notes digest**, only if you turned notes on with `WF_BRAIN=1` and listed folders in
   `WF_BRAIN_DIRS`. Senti picks the note for the current project and sends its `## Senti` section. A
@@ -135,7 +135,11 @@ Some of this is sent, as the tables above say. The rest never leaves the Mac.
 | `~/.config/senti/config.local.sh`, `snippets.txt`, `replacements.txt`, `brain-map.txt` | Your own settings, snippets, dictionary and note mappings | Until you remove them |
 | `~/.cache/senti/capture.wav`, `screen.png`, `screen-small.jpg`, `selection.txt`, `ctx-*` | The audio, screenshot, selected text and prepared context of the current turn. `ctx-shot.jpg` is the screenshot shrunk at key-down | Deleted at the end of each turn, when Senti starts, and every 60 seconds while it is idle |
 | `~/.cache/senti/brain/notion-<page id>.txt` | The digest of a mapped Notion page, after the rules above (never the whole page). Mode 600 | Reused for 10 minutes (`WF_NOTION_TTL_MIN`), then deleted at the next read, the next right ⌘ press, or the session sweep at launch and every 30 minutes. All are deleted once Notion is turned off |
-| `~/.cache/senti/sessions/<window>.tsv` | Session memory: Prompt, Command and Context turns, 200 characters each, at most 12 per window. Mode 600 | Turns older than 24 hours are never recalled. Files are deleted 24 hours after their last turn, at launch and every 30 minutes while Senti runs |
+| `~/.cache/senti/sessions/<window>.tsv` | Session memory: Prompt, Command and Context turns, the first 200 bytes of each, at most 12 per window. Mode 600 | Turns older than 24 hours are never recalled. Files are deleted 24 hours after their last turn, at launch and every 30 minutes while Senti runs |
+| `~/.cache/senti/mictest.wav` | The 1.2 second clip of the menu's microphone test | Swept like `capture.wav` |
+| `~/.cache/senti/muted-by-senti` | The ID of the output device while Senti has it muted (only with that option on) | Deleted when Senti unmutes it |
+| `~/.cache/senti/sox.pid`, `target.pref`, `allow-ipc` | The recorder's process ID, a remembered destination choice, the opt-in flag for `hs.ipc`. No speech | Until replaced or removed |
+| `~/.config/senti/config.sh.v<N>.bak` | Your previous `config.sh`, kept by an update | Until you delete it |
 | `~/.cache/senti/last-request.json` | Names and counts from the last AI request. Mode 600. No speech, prompt or answer text | Replaced by the next AI request |
 | `~/Library/Logs/senti.log` | Events, character counts, note file names. Mode 600. Transcripts only if you set `WF_DEBUG=1` | Never rotated |
 | `~/Library/Logs/senti-server.log` | The speech server's start-up lines and one line per request with the audio file name. A check of a real log on 13 November 2026 found no transcript text | Never rotated |
@@ -184,11 +188,16 @@ with your Keychain items, and about the speech models. See the README's Uninstal
 
 ## Changes
 
-- **14 November 2026 (1.1, unreleased):** Notion added as a second notes source beside Obsidian, off
+- **15 November 2026 (1.1):** The Prompt screenshot is of the focused window, not the whole display.
+  Session memory is recalled only for the same project, not just the same window. Command mode no longer reads the selection of a window you moved to after
+  speaking, so that text is not sent. Context mode without a screenshot keeps your words on the
+  clipboard. A window title picks a model's guidance only by a strict rule. Anthropic's default model
+  is `claude-haiku-5-5`. The uninstaller turns Hammerspoon's own icons back on.
+- **14 November 2026 (1.1):** Notion added as a second notes source beside Obsidian, off
   by default, with its token in the Keychain. Optional retrieval of one more note from the project's
   vault folder, off by default. Both send only on heavy turns. The screenshot is now shrunk at
   key-down; the image that is sent is unchanged.
-- **13 November 2026 (1.1, unreleased):** Anthropic and OpenRouter added as providers. Keys moved to
+- **13 November 2026 (1.1):** Anthropic and OpenRouter added as providers. Keys moved to
   the macOS Keychain. The background step that sent a notes digest to the model to shorten it was
   deleted, so there is no background upload, and old digests it left in `~/.cache/senti/brain/` are
   deleted by the session sweep. Added the screenshot toggle for Prompt, `last-request.json` and the

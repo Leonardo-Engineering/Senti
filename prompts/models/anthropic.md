@@ -137,9 +137,9 @@ Read 15 Nov 2026 (Anthropic's own pages), for the 4 model sections:
 
 Earlier research:
 
-- `/private/tmp/claude-501/bundled-skills/2.1.226/253484d17958881e6ba8c3c905db4919/claude-api/shared/model-migration.md` (local, authoritative — per-model breaking changes and behavioral-shift prompting guidance)
-- `/private/tmp/claude-501/bundled-skills/2.1.226/253484d17958881e6ba8c3c905db4919/claude-api/shared/models.md` (local, authoritative — current model lineup, IDs, pricing)
-- `/private/tmp/claude-501/bundled-skills/2.1.226/253484d17958881e6ba8c3c905db4919/claude-api/shared/prompt-audit.md` (local, authoritative — dated prompt-pattern catalog and removal rubric)
+- Anthropic's `claude-api` skill, `shared/model-migration.md` (bundled with Claude Code; per-model breaking changes and behavioral-shift prompting guidance)
+- Anthropic's `claude-api` skill, `shared/models.md` (bundled with Claude Code; current model lineup, IDs, pricing)
+- Anthropic's `claude-api` skill, `shared/prompt-audit.md` (bundled with Claude Code; dated prompt-pattern catalog and removal rubric)
 - https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
 - https://platform.claude.com/docs/en/build-with-claude/effort
 - https://platform.claude.com/docs/en/about-claude/models/overview

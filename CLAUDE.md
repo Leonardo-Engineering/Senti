@@ -177,6 +177,8 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
   keychain on the auto tier costs up to 4 alarms of 5 s and ends as exit 10, not 19; a sox that needs SIGKILL
   leaves an unfinished WAV that can be gated as a tap; a muted output device that disconnects mid-turn can come
   back muted; with 2 keyboards `watchHold` may read the other one's flags. Also left:
+  the focus check ignores counts and leading symbols, so 2 tabs of ONE window titled "Untitled (1)" and
+  "Untitled (2)" compare equal (chosen over refusing to type when an unread count changes);
   a hold key pressed while working is not queued (it is announced, and the finished result waits 2 s for the
   key to come up).
 - **Paste (Phase 2):** everything pastes through `wf.deliver` (see the header comment there). First real

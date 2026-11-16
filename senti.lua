@@ -979,6 +979,7 @@ local ET = hs.eventtap.event.types
 wf.escTap = hs.eventtap.new({ ET.keyDown, ET.leftMouseDown, ET.rightMouseDown, ET.otherMouseDown }, function(e)
   local ok, acted = pcall(function()
     local isKey = (e.getType == nil) or e:getType() == ET.keyDown
+    wf.busyCancel()                              -- a key or a click with the hold key: a shortcut, not a dictation
     if not isKey then
       -- a click while holding: it may be right Command+click (a shortcut) or the user placing the
       -- cursor before speaking, so the take goes on. If it ends silent, say nothing (see handleTranscript).
@@ -1124,7 +1125,7 @@ function wf.titleHead(w)
   -- A title can change by itself during a turn: a spinner glyph in front (Claude Code in Ghostty or
   -- iTerm2), an unread count "(3) Inbox" or "Inbox (4)", an editor's unsaved dot. Compare without
   -- those, or a dictation into the SAME window is refused as "you switched windows".
-  head = head:gsub("^%(%d+%)%s*", ""):gsub("%s*[%(%[]%d+[%)%]]%s*$", "")
+  head = head:gsub("%s*[%(%[]%d+[%)%]]", "")      -- a count anywhere: "(3) Inbox", "Inbox (4)", "Inbox (3) - me - Mail"
   -- Leading symbols only: ASCII punctuation and spaces, and the Unicode blocks U+2000 to U+28FF
   -- (general punctuation, arrows, shapes, dingbats, Braille spinner frames; UTF-8 lead byte E2 with
   -- a second byte 80 to A3). Letters in any script stay, so 2 tabs titled in Cyrillic or Chinese
@@ -1133,6 +1134,8 @@ function wf.titleHead(w)
     local a = head:match("^[%s%p]+")
     if a then head = head:sub(#a + 1)
     elseif head:match("^\226[\128-\163][\128-\191]") then head = head:sub(4)
+    elseif head:match("^\239\184[\128-\143]") then head = head:sub(4)            -- a variation selector left by a glyph
+    elseif head:match("^\240\159[\128-\191][\128-\191]") then head = head:sub(5)  -- an emoji (U+1F000 to U+1FFFF)
     else break end
   end
   return (head:gsub("%s+$", ""))
@@ -2150,7 +2153,7 @@ function wf.handleTranscript(raw, turn, clipOnly)
     end
     -- A silent take in which the user clicked: right Command+click or right Option+drag, a shortcut
     -- that used to end in the "mic may be muted" alert and its error sound.
-    if wf.clickInHold then
+    if wf.clickInHold and (wf.lastHold or 99) < 3 then   -- a short hold only: a long silent take still gets the alert
       wf.log("transcript: empty after a hold with a click — ignored")
       wf.setState("idle"); wf.sweepCache()
       return
@@ -2434,6 +2437,7 @@ function wf.langName(code)
   return tostring(code)
 end
 function wf.setLang(code)
+  if wf.engineBusy() then return end           -- a language change can reload the server (Fast is English only)
   hs.task.new(wf.BASH, function(rc, out)
     local now = (out or ""):gsub("%s+", "")
     if rc ~= 0 or now == "" then wf.notify("Could not change the language.", 4, wf.TONE.warn); return end
@@ -2651,12 +2655,22 @@ end
 
 -- A hold key pressed while the last turn is still working used to do nothing at all: no recording,
 -- no word of why, and its modifier then made the finished result wait and miss its paste.
+-- Only a key that stays down ALONE for 0.4 s counts: right Option+e for an accent, Fn+Delete or a
+-- right Command shortcut typed in another app while Senti works is not an attempt to dictate.
+function wf.busyCancel()
+  if wf.busyTimer then wf.busyTimer:stop(); wf.busyTimer = nil end
+end
 function wf.busyPress()
-  local now = hs.timer.secondsSinceEpoch()
-  if wf.busyAt and now - wf.busyAt < 2 then return end
-  wf.busyAt = now
-  wf.log("tap: hold key pressed while working; ignored")
-  wf.notify("Senti is still writing the last one.\nLet go, and speak again when it lands.", 3)
+  if wf.busyTimer then return end
+  wf.busyTimer = hs.timer.doAfter(0.4, function()
+    wf.busyTimer = nil
+    if wf.state ~= "working" then return end
+    local now = hs.timer.secondsSinceEpoch()
+    if wf.busyAt and now - wf.busyAt < 2 then return end
+    wf.busyAt = now
+    wf.log("tap: hold key pressed while working; ignored")
+    wf.notify("Senti is still writing the last one.\nLet go, and speak again when it lands.", 3)
+  end)
 end
 
 function wf.armTap()
@@ -2675,16 +2689,19 @@ function wf.armTap()
         if flags.alt == true and wf.held == nil and wf.state == "idle" then
           wf.held = code; wf.heldAt = hs.timer.secondsSinceEpoch(); wf.log("tap: right⌥ down"); wf.beginCapture("verbatim")
         elseif flags.alt == true and wf.held == nil and wf.state == "working" then wf.busyPress()
+        elseif flags.alt ~= true then wf.busyCancel()
         end
       elseif code == wf.HOLD_PROMPT then
         if flags.cmd == true and wf.held == nil and wf.state == "idle" then
           wf.held = code; wf.heldAt = hs.timer.secondsSinceEpoch(); wf.log("tap: right⌘ down"); wf.snapAndCapture("prompt")
         elseif flags.cmd == true and wf.held == nil and wf.state == "working" then wf.busyPress()
+        elseif flags.cmd ~= true then wf.busyCancel()
         end
       elseif code == wf.HOLD_COMMAND then
         if flags.fn == true and wf.held == nil and wf.state == "idle" then
           wf.held = code; wf.heldAt = hs.timer.secondsSinceEpoch(); wf.log("tap: Fn down"); wf.snapAndCapture("command")
         elseif flags.fn == true and wf.held == nil and wf.state == "working" then wf.busyPress()
+        elseif flags.fn ~= true then wf.busyCancel()
         end
       end
     end)

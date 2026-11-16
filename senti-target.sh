@@ -80,6 +80,7 @@ elif [ -n "$HINT" ] || [ -n "$TITLE" ]; then
 }"; SEGS="${SEGS// - /
 }"; SEGS="${SEGS// | /
 }"; SEGS="${SEGS// · /
+}"; SEGS="${SEGS// \/ /
 }"
     for f in "$KB"/*.md; do
       [ -f "$f" ] || continue

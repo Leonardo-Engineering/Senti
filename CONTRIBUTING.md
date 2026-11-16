@@ -110,7 +110,8 @@ steps below are for when that yes is given.
 
 1. **Changelog.** Move the `Unreleased` section of `CHANGELOG.md` under the new version and date.
 2. **Version strings.** Find every file that carries the version and change them together:
-   `grep -rn 'CFBundle.*Version' app/Info.plist` and the changelog heading.
+   `grep -rn 'CFBundle.*Version' app/Info.plist`, the changelog heading, the "unreleased" marks in
+   `PRIVACY.md`'s Changes list, and the sentence about attached files in `README.md`'s Install section.
 3. **Checks.** CI is green on `main`. On a real Mac: `./install.sh`, then
    `bash ~/.config/senti/senti-selftest.sh`. If the dictation path changed, measure it again and
    update the latency lines in `README.md` with the new date.
