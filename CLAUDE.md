@@ -232,6 +232,16 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
   extra API call) to a knowledge file in `prompts/models/` and injects only that file's
   `## Inject` digest (~900B). Injecting the full research prose instead cost 4.5KB and
   pushed prompt mode to 9.9s — keep the digests small.
+- **Per-model sections (15 Nov 2026):** models of ONE family prompt differently (OpenAI's GPT-6 guide is
+  written from gpt-6-astra and says guidance that helps Sol or Luna may overconstrain it; Anthropic has a
+  page per model; Sonnet 5.5 and Haiku 5.5 want a verification line that Opus should not get). Each file
+  ends with `## Model: <id>` sections (about 1 to 1.5 KB each, 20 today) written ONLY from that lab's own
+  pages (research reports in `.claude/tmp/team/kb-*-report.md`). Which one is injected: Claude Code's
+  transcript (`cc_model`), Codex's `~/.codex/config.toml` top-level `model` key (`codex_model`, only when
+  Codex is in front, value charset-checked), else the section whose `app: <regex>` line matches the app
+  name or window title (`app_model`: ChatGPT is gpt-6-sol, Codex gpt-6.1-sol, Gemini gemini-4-hydrogen).
+  The `app:` line is never injected. DeepSeek and MiniMax publish no prompting guide; their sections hold
+  only what their API pages state. `tools/models-watch.py` reports any listed model without a section.
 - **Prompt intelligence:** one call, context-heavy. Both prompt paths assemble: shared craft
   (`prompts/prompt-craft.md`) + vault digest (`senti-brain.sh`) + session memory
   (`senti-session.sh`) + target-model guidance (`senti-target.sh`). Best mode was DELETED

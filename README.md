@@ -38,14 +38,19 @@ Hold right ⌘, say what you want in your own words, and let go. Senti writes a 
 at your cursor.
 
 - **It writes for the model in front of you.** Ask for the same thing in Claude and in ChatGPT and
-  you get 2 different prompts. Each follows that model maker's own guidance. The Claude guidance, for
-  example, asks for XML tags when a prompt mixes instructions, context and examples; the OpenAI
-  guidance asks for a lean prompt with no hand-written "think step by step". The guidance lives in
-  `prompts/models/*.md`, distilled from 90 linked sources across OpenAI, Anthropic, Google,
-  open-weight models and prompting research. Edit those files and the behavior changes.
-- **It knows where you are.** Senti reads the name of the app in front and its window title, and in
-  a Claude Code terminal it reads the model name from Claude Code's own session file. All of this is
-  local and costs no extra API call.
+  the prompts differ, because each follows that model's own guidance. Models from one lab differ too:
+  OpenAI's guide for its largest model says to describe the goal and leave out the recipe, while its
+  smallest model does better when told the exact output shape; Anthropic documents each current Claude
+  model on its own page. So the knowledge in `prompts/models/*.md` has a section per model, 20 in all
+  (4 Claude, 5 OpenAI, 2 Gemini, Grok, Kimi, Mistral, Qwen, GLM, DeepSeek, MiniMax), each written from
+  that lab's own pages
+  with the source links and the date beside it. Edit those files and the behavior changes.
+- **It knows where you are.** Senti reads the name of the app in front and its window title. ChatGPT
+  resolves to the model ChatGPT runs and Codex to the model in Codex's own config; in a Claude Code
+  terminal Senti reads the model name from Claude Code's session file. All of this is local and costs
+  no extra API call.
+- **It stays current.** A weekly check compares the list with what the labs have released and opens
+  an issue when a model is new, gone or missing its section (see CONTRIBUTING.md).
 - **It can see your screen.** With **Use a screenshot in Prompt** on (the default), Prompt mode also
   sends a downscaled screenshot so the prompt fits what you are working on. Turn it off in the menu
   bar for text only.

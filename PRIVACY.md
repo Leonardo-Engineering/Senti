@@ -106,6 +106,8 @@ Some of this is sent, as the tables above say. The rest never leaves the Mac.
 - The last 120 KB of the newest Claude Code session file for the project in the title
   (`~/.claude/projects/...`), to learn which Claude model you are using. Only the model name can
   reach a prompt, inside the model guidance.
+- When Codex is the app in front: the `model` line of `~/.codex/config.toml`, to learn which OpenAI
+  model Codex is set to. Nothing else in that file is read, and only the model name can reach a prompt.
 - The git branch of `~/code/<project>`, read from `.git/HEAD`, plus your `replacements.txt`. These
   become a short spelling hint for the local speech server and never leave the Mac.
 - The text you select, in Command mode, which is sent as listed above.
