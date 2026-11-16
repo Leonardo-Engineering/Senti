@@ -20,7 +20,9 @@ screenshot — to cheap cloud APIs.
   (model load included, file in the page cache) took 330 ms against the warm turbo server's
   425 ms on a 3.7 s clip and 440 ms against 920 ms on a 12.8 s clip (q8_0 model, 3 runs each,
   3 TTS clips, same words except one Spanish word Parakeet got wrong). The first call after the
-  file leaves the page cache took 911 ms. `whisper-server` still has no Parakeet mode. So
+  file leaves the page cache took 911 ms. That raw comparison ran whisper WITHOUT `audio_ctx`; through
+  the real `senti-dictate.sh stop` path (4 runs each): 3.7 s clip 500 ms whisper / 395 ms Parakeet,
+  12.8 s 575 / 495, 20.8 s 1,085 / 615. The gain is mostly past the 14 s `audio_ctx` gate. `whisper-server` still has no Parakeet mode. So
   Parakeet is a third Speed choice (`model.pref` = `parakeet` → `WF_ENGINE`), used only when the
   model file and binary exist and the language is one of its 25; no vocabulary hint, no
   `audio_ctx`; any failure or empty result falls back to the whisper request in the same turn.
