@@ -176,7 +176,9 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 - **AI providers:** one adapter (`senti-ai.sh`), three providers, one key each:
   - **OpenAI** (default, `gpt-6-luna`, the only provider with a passed live call): chat
     completions, `reasoning_effort`, `max_completion_tokens` 4000.
-  - **Anthropic** (default `claude-opus-5-5`): messages API, `anthropic-version: 2026-10-21`,
+  - **Anthropic** (default `claude-haiku-5-5` since 15 Nov 2026: rewriting a spoken idea is light, latency-bound
+    work, Haiku is Anthropic's fastest model at gpt-6-luna's price and Opus cost 40 times more per prompt; it
+    was `claude-opus-5-5` before. Not live-tested, like every Anthropic path): messages API, `anthropic-version: 2026-10-21`,
     system block with `cache_control`, `output_config.effort`, `max_tokens` 8000 (thinking
     counts toward it), NO `temperature`, NO prefill, NO `thinking` field (all 400 on the
     current models). Refusal fallbacks on for Opus/Sonnet (`fallbacks: "default"` + beta

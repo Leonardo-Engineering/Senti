@@ -57,6 +57,9 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Changed
 
+- The default Anthropic model is now `claude-haiku-5-5` (it was `claude-opus-5-5`). Haiku is Anthropic's fastest
+  model and costs the same as `gpt-6-luna`; Opus cost about 40 times more per prompt for the same rewrite.
+  A model you picked yourself is kept.
 - Dictated text is written to the clipboard for this Mac only, so Universal Clipboard should not send it
   to your other devices (not yet confirmed with a second device).
 - A key-up that macOS never delivers now ends the recording within half a second, not after 150 seconds.

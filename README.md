@@ -215,7 +215,7 @@ shell history.
 | Provider | Default model |
 |---|---|
 | OpenAI | `gpt-6-luna` (the default provider) |
-| Anthropic | `claude-opus-5-5` |
+| Anthropic | `claude-haiku-5-5` |
 | OpenRouter | `openai/gpt-6-luna` |
 
 Add a key for any of them in the menu bar ("AI provider and key...") or with
@@ -223,8 +223,7 @@ Add a key for any of them in the menu bar ("AI provider and key...") or with
 
 Prices are US dollars per 1 million tokens, from `ai-models.json`. OpenAI prices were checked on
 11 November 2026 on [OpenAI's pricing page](https://developers.openai.com/api/docs/pricing). Anthropic prices
-come from a model table cached 3 November 2026 and read 13 November 2026; they have not been checked
-on Anthropic's pricing page yet. OpenRouter prices come from OpenRouter's
+were checked on 15 November 2026 on [Anthropic's pricing page](https://platform.claude.com/docs/en/about-claude/pricing). OpenRouter prices come from OpenRouter's
 model list, fetched 14 November 2026. Through OpenRouter one key reaches models from 9 labs; the list
 is picked from OpenRouter's catalog and its most-used models.
 
@@ -241,9 +240,9 @@ is picked from OpenRouter's catalog and its most-used models.
 
 | Model | Use it for | Input | Output |
 |---|---|---|---|
-| `claude-opus-5-5` | The default when the provider is Anthropic | $4.00 | $20.00 |
+| `claude-haiku-5-5` | The default when the provider is Anthropic: the fastest Claude, at the price of `gpt-6-luna` (prompts up to 100K tokens) | $0.10 | $0.50 |
 | `claude-sonnet-5-5` | Claude at a middle price | $2.00 | $10.00 |
-| `claude-haiku-5-5` | Claude at the same price as `gpt-6-luna` (prompts up to 100K tokens) | $0.10 | $0.50 |
+| `claude-opus-5-5` | Claude, most capable, at 40 times the default's price | $4.00 | $20.00 |
 
 **OpenRouter**
 

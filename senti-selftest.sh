@@ -352,10 +352,12 @@ if avail != {"openai": True, "anthropic": True, "openrouter": True}:
 print("; ".join(errs) if errs else "OK %d providers %d models %s" % (len(P), len(d["models"]), " ".join("%s=%s" % (p, v["default"]) for p, v in sorted(P.items()))))
 PY
 )"
+FBK="$(for m in claude-opus-5-5 claude-sonnet-5-5; do SENTI_AI_DRYRUN=1 SENTI_PROVIDER=anthropic SENTI_MODEL="$m" SENTI_IN="hi" SENTI_SYS="sys" bash "$AI" 2>&1 | /usr/bin/python3 -c 'import sys, json; d = json.load(sys.stdin); print("yes" if d["body"].get("fallbacks") == "default" and d["headers"].get("anthropic-beta") == "server-side-fallback-2026-07-01" else "no")'; done | /usr/bin/tr '\n' ' ')"
+[ "$FBK" = "yes yes " ] && ok "Opus and Sonnet requests carry the refusal fallback; the Haiku default does not" || bad "refusal fallbacks on Opus/Sonnet: $FBK"
 case "$REGCHK" in OK*) ok "ai-models.json valid: ${REGCHK#OK }" ;; *) bad "ai-models.json: $REGCHK" ;; esac
 DEFS="$(bash -c 'source "$1"; for p in openai anthropic openrouter; do printf "%s=%s " "$p" "$(senti_default_model "$p")"; done' _ "$KEY")"
-case "$REGCHK" in *"anthropic=claude-opus-5-5 openai=gpt-6-luna openrouter=openai/gpt-6-luna"*)
-  case "$DEFS" in "openai=gpt-6-luna anthropic=claude-opus-5-5 openrouter=openai/gpt-6-luna ") ok "shell defaults match the registry" ;;
+case "$REGCHK" in *"anthropic=claude-haiku-5-5 openai=gpt-6-luna openrouter=openai/gpt-6-luna"*)
+  case "$DEFS" in "openai=gpt-6-luna anthropic=claude-haiku-5-5 openrouter=openai/gpt-6-luna ") ok "shell defaults match the registry" ;;
     *) bad "shell defaults ($DEFS) differ from the registry" ;; esac ;;
   *) bad "registry defaults changed: update senti_default_model in senti-key.sh to match" ;; esac
 
@@ -381,7 +383,9 @@ for c in chunks:
         if "temperature" in b or "thinking" in b: errs.append("anthropic sends temperature/thinking")
         if b["messages"][-1]["role"] != "user": errs.append("anthropic prefill")
         if b["system"][0].get("cache_control", {}).get("type") != "ephemeral": errs.append("anthropic cache_control")
-        if b.get("fallbacks") != "default" or h.get("anthropic-beta") != "server-side-fallback-2026-07-01": errs.append("anthropic fallbacks")
+        # the default is Haiku, which has no refusal fallbacks; Opus and Sonnet do (checked separately below)
+        if b.get("model") != "claude-haiku-5-5": errs.append("anthropic default model is " + str(b.get("model")))
+        if "fallbacks" in b or "anthropic-beta" in h: errs.append("haiku sent with fallbacks")
         if img and b["messages"][0]["content"][0]["type"] != "image": errs.append("anthropic image block not first")
         if h.get("x-api-key") != "[key]": errs.append("anthropic key not masked")
     elif prov == "openrouter":

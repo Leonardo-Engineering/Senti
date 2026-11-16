@@ -61,7 +61,7 @@ senti_provider_label() {
 # provider's "default"; the self-test asserts the two agree.
 senti_default_model() {
   case "${1:-}" in
-    anthropic)  printf 'claude-opus-5-5' ;;
+    anthropic)  printf 'claude-haiku-5-5' ;;
     openrouter) printf 'openai/gpt-6-luna' ;;
     *)          printf 'gpt-6-luna' ;;
   esac
