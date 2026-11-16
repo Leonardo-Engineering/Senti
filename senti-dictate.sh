@@ -221,6 +221,20 @@ EOF
   # the #1 dictation complaint — mangled project names and code identifiers. The terms
   # come from where you already are: the project from the focused window title, the git
   # branch, and the right-hand side of your custom dictionary.
+  # Optional engine: Parakeet (config.sh decides; default is whisper). One process per clip,
+  # under a deadline; only the audio path is on its command line. If it fails or returns
+  # nothing, fall through to the whisper server below, so no words are lost to the option.
+  if [ "${WF_ENGINE:-whisper}" = "parakeet" ]; then
+    local praw prc
+    praw="$(/usr/bin/perl -e 'alarm shift; exec @ARGV' 30 "$WF_PARAKEET_CLI" -m "$WF_PARAKEET_MODEL" -t 6 -np -f "$WF_AUDIO" 2>/dev/null)"
+    prc=$?
+    if [ "$prc" -eq 0 ] && [ -n "${praw//[[:space:]]/}" ]; then
+      log "engine: parakeet (${dur:-?}s clip)"
+      clean_text "$praw"
+      return 0
+    fi
+    log "engine: parakeet gave nothing (exit $prc), using whisper"
+  fi
   local bias
   bias="$(build_bias)"
 

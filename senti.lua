@@ -2470,10 +2470,18 @@ local function menu()
             wf.notify("Switching to Fast model…")
             hs.task.new(wf.BASH, function() wf.notify("Fast mode on", 2) end, {wf.MODELSH, "fast"}):start()
           end },
-        { title = (curModel ~= "fast" and "✓ " or "   ") .. "Accurate (turbo, ~0.8s)", fn = function()
+        { title = (curModel == "accurate" and "✓ " or "   ") .. "Accurate (turbo, ~0.8s)", fn = function()
             wf.notify("Switching to Accurate model…")
             hs.task.new(wf.BASH, function() wf.notify("Accurate mode on", 2) end, {wf.MODELSH, "accurate"}):start()
           end },
+        (function()
+          local has = hs.execute(wf.BASH .. " '" .. wf.MODELSH .. "' has-parakeet"):gsub("%s+", "") == "yes"
+          if not has then return { title = "   Parakeet (optional download, see the README)", disabled = true } end
+          return { title = (curModel == "parakeet" and "✓ " or "   ") .. "Parakeet (~0.4s, no vocabulary hint)", fn = function()
+            wf.notify("Switching to Parakeet…")
+            hs.task.new(wf.BASH, function(rc) wf.notify(rc == 0 and "Parakeet on. Whisper stays loaded as the fallback." or "Parakeet is not available.", 4) end, {wf.MODELSH, "parakeet"}):start()
+          end }
+        end)(),
       } },
     { title = "Language: " .. wf.langName(curLang), menu = wf.langMenu(curLang) },
     { title = "Mute other audio while recording", checked = (wf.prefs and wf.prefs.mute_recording) and true or false,

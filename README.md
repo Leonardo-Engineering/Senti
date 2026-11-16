@@ -163,6 +163,21 @@ curl -L -o ~/.local/share/whisper-models/ggml-base.en.bin \
   https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
 ```
 
+**Parakeet (optional).** NVIDIA's Parakeet model runs through the `parakeet-cli` that Homebrew's
+whisper-cpp already installs. On an M-series Mac it transcribed a 13 second clip in 0.44 seconds
+against 0.92 for the default model. It knows 25 European languages and takes no vocabulary hint, so
+project names lean on your `replacements.txt`. Download the model (669 MB), check it, then pick
+Speed, then Parakeet in the menu bar. If Parakeet fails on a clip, Senti uses the default model for it.
+
+```bash
+curl -L -o ~/.local/share/whisper-models/ggml-parakeet-tdt-0.6b-v3-q8_0.bin \
+  https://huggingface.co/ggml-org/parakeet-GGUF/resolve/main/ggml-parakeet-tdt-0.6b-v3-q8_0.bin
+shasum -a 256 ~/.local/share/whisper-models/ggml-parakeet-tdt-0.6b-v3-q8_0.bin
+# 4d64e9e96c2792186d072fde0034df0ad670cf680a2f53069052ead827fd600e
+```
+
+The model is NVIDIA's `parakeet-tdt-0.6b-v3` (CC-BY-4.0), converted by the whisper.cpp project.
+
 ## Add an AI key (optional)
 
 Dictation never needs a key. Prompt, Command and Context use your own key for one of the providers

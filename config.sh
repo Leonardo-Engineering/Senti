@@ -59,6 +59,24 @@ WF_MODELS_DIR="$HOME/.local/share/whisper-models"
 WF_MODEL_ACCURATE="$WF_MODELS_DIR/ggml-large-v3-turbo-q5_0.bin"
 WF_MODEL_FAST="$WF_MODELS_DIR/ggml-base.en.bin"
 WF_MODEL_PREF="$HOME/.cache/senti/model.pref"
+# Optional third engine: NVIDIA Parakeet through the parakeet-cli that ships with whisper-cpp.
+# Used only when it was picked in the menu (model.pref says parakeet), the model file and the
+# binary both exist, and the language is one it knows. Anything else, and any failure, uses the
+# whisper server. No vocabulary hint and no language setting: it detects among 25 European
+# languages by itself.
+WF_PARAKEET_MODEL="${WF_PARAKEET_MODEL:-$WF_MODELS_DIR/ggml-parakeet-tdt-0.6b-v3-q8_0.bin}"
+WF_PARAKEET_CLI="${WF_PARAKEET_CLI:-/opt/homebrew/bin/parakeet-cli}"
+[ -x "$WF_PARAKEET_CLI" ] || WF_PARAKEET_CLI="/usr/local/bin/parakeet-cli"
+if [ -z "${WF_ENGINE:-}" ]; then
+  WF_ENGINE="whisper"; _wf_eng=""
+  if [ -f "$WF_MODEL_PREF" ]; then IFS= read -r _wf_eng < "$WF_MODEL_PREF" || true; fi
+  if [ "$_wf_eng" = "parakeet" ] && [ -f "$WF_PARAKEET_MODEL" ] && [ -x "$WF_PARAKEET_CLI" ]; then
+    case "$WF_LANG" in
+      auto|en|es|fr|de|pt|it|nl|pl|ru|uk|sv|da|fi|el|cs|ro|hu|bg|hr|sk|sl|et|lv|lt|mt) WF_ENGINE="parakeet" ;;
+    esac
+  fi
+  unset _wf_eng
+fi
 if [ -z "${WF_MODEL:-}" ]; then
   # builtin read: no spawn. It returns 1 on an empty file or a last line with no newline,
   # and senti-serve.sh sources this under set -e, so the || true is load-bearing.
@@ -66,7 +84,7 @@ if [ -z "${WF_MODEL:-}" ]; then
   if [ -f "$WF_MODEL_PREF" ]; then IFS= read -r _wf_pref < "$WF_MODEL_PREF" || true; fi
   case "$_wf_pref" in
     fast) WF_MODEL="$WF_MODEL_FAST" ;;
-    *)    WF_MODEL="$WF_MODEL_ACCURATE" ;;
+    *)    WF_MODEL="$WF_MODEL_ACCURATE" ;;      # also for "parakeet": the server stays warm as its fallback
   esac
   # The Fast model (base.en) knows English only. Any other language, or auto-detect, uses the
   # Accurate model when it is on disk.

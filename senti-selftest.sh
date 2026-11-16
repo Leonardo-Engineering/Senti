@@ -1092,6 +1092,25 @@ O3="$(say_as auto 'Bom, um dia.')";          A3="$(/usr/bin/grep -c '^language=a
 [ "$A1$A2$A3" = "111" ] && ok "each transcription request carries the chosen language (es, en, auto)" || bad "language in the request: es=$A1 en=$A2 auto=$A3"
 [ "$O2" = "Open the file. " ] || [ "$O2" = "Open the file." ] && ok "English keeps its filler rules" || bad "English cleanup gave '$O2'"
 case "$O1|$O3" in "Um, quiero um café."*"|Bom, um dia."*) ok "outside English, 'um' is kept as a word and only uh/erm/hmm are dropped" ;; *) bad "non-English cleanup gave '$O1' and '$O3'" ;; esac
+# Parakeet (optional engine): a stand-in CLI and model. Default off; on only when picked AND
+# present AND the language is one it knows; a failure falls back to the whisper request.
+FPK="$HOME/.cache/senti/fakeparakeet"; FPM="$HOME/.cache/senti/fake-parakeet.bin"; : > "$FPM"
+printf '#!/bin/bash\n[ -n "${PK_FAIL:-}" ] && exit 3\nprintf "%%s\\n" "$@" > "%s.pk"\necho "from parakeet"\n' "$CARGS" > "$FPK"; /bin/chmod 700 "$FPK"
+eng_of() { ( unset WF_ENGINE WF_LANG WF_MODEL; WF_PARAKEET_CLI="$FPK"; WF_PARAKEET_MODEL="$1"; . "$CFG/config.sh"; printf %s "$WF_ENGINE" ); }
+MPOLD2="$(/bin/cat "$MP" 2>/dev/null || true)"; /bin/rm -f "$LP"
+/bin/rm -f "$MP"; E0="$(eng_of "$FPM")"; echo parakeet > "$MP"; E1="$(eng_of "$FPM")"; E2="$(eng_of "$HOME/none.bin")"; echo ja > "$LP"; E3="$(eng_of "$FPM")"; /bin/rm -f "$LP"
+[ "$E0|$E1|$E2|$E3" = "whisper|parakeet|whisper|whisper" ] && ok "Parakeet is used only when picked, present and the language is one it knows" || bad "engine resolution: '$E0|$E1|$E2|$E3'"
+pk_say() { WF_SOX="$FSOX2" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1
+  for _i in $(/usr/bin/seq 1 100); do [ -s "$HOME/.cache/senti/capture.wav" ] && break; /bin/sleep 0.1; done
+  WF_PARAKEET_CLI="$FPK" WF_PARAKEET_MODEL="$FPM" WF_SOX="$FSOX2" WF_CURL="$FCURL" FAKE_TEXT="from whisper" WF_SOUNDS=0 WF_TAIL_MS=0 bash "$CFG/senti-dictate.sh" stop 2>/dev/null; }
+/bin/rm -f "$CARGS"; P1="$(pk_say)"; P1C="$([ -e "$CARGS" ] && echo called || echo no)"
+P2="$(PK_FAIL=1 pk_say)"
+[ "$P1" = "From parakeet" ] && [ "$P1C" = "no" ] && ok "with Parakeet on, the clip goes to parakeet-cli and the whisper server is not called" || bad "parakeet path gave '$P1' (whisper $P1C)"
+[ "$P2" = "From whisper" ] && ok "when parakeet-cli fails the same clip is transcribed by whisper" || bad "parakeet failure gave '$P2'"
+PKA="$(/bin/cat "$CARGS.pk" 2>/dev/null | /usr/bin/tr '\n' ' ')"
+case "$PKA" in *"-f $HOME/.cache/senti/capture.wav"*) ok "parakeet-cli receives the audio path and nothing else of the user's" ;; *) bad "parakeet-cli arguments: $PKA" ;; esac
+if [ -n "$MPOLD2" ]; then echo "$MPOLD2" > "$MP"; else /bin/rm -f "$MP"; fi
+/bin/rm -f "$FPK" "$FPM" "$CARGS.pk"
 /bin/rm -f "$LP" "$FSOX2" "$FCURL" "$CARGS" "$HOME/.cache/senti/capture.wav"
 if [ "$CI" = 1 ]; then
   [ -f "$SRC/snippets.txt" ] && ! /usr/bin/grep -v '^#' "$SRC/snippets.txt" | /usr/bin/grep -q '|' && /usr/bin/grep -q '\[ -f "\$CFG/snippets.txt" \]' "$SRC/install.sh" \

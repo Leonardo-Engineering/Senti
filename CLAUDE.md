@@ -14,10 +14,18 @@ screenshot — to cheap cloud APIs.
   decision, see `LICENSE`. The owner's name and Mac username were scrubbed from files *and*
   git history. **Do not reintroduce them** (no real names, no `/Users/<name>/…` paths in
   committed files; use `$HOME` / `__HOME__`).
-- **Speech engine: stay on whisper.cpp.** Parakeet was evaluated on 2026-11-11. It only
-  beats the warm whisper server if it also stays loaded, and no audited runtime does that
-  yet. Upstream whisper.cpp has a `parakeet-cli` on master that Homebrew's 1.9.5 does not
-  ship; revisit when a Homebrew release includes Parakeet in the server.
+- **Speech engine: whisper.cpp is the default; Parakeet is opt-in.** The 2026-11-11 note said
+  Homebrew's 1.9.5 has no `parakeet-cli` and that Parakeet only wins if kept loaded. Both were
+  wrong on this Mac on 15 Nov 2026: the bottle ships `parakeet-cli`, and one process per clip
+  (model load included, file in the page cache) took 330 ms against the warm turbo server's
+  425 ms on a 3.7 s clip and 440 ms against 920 ms on a 12.8 s clip (q8_0 model, 3 runs each,
+  3 TTS clips, same words except one Spanish word Parakeet got wrong). The first call after the
+  file leaves the page cache took 911 ms. `whisper-server` still has no Parakeet mode. So
+  Parakeet is a third Speed choice (`model.pref` = `parakeet` → `WF_ENGINE`), used only when the
+  model file and binary exist and the language is one of its 25; no vocabulary hint, no
+  `audio_ctx`; any failure or empty result falls back to the whisper request in the same turn.
+  NOT measured: real voices, accents, noisy rooms, project names (where the hint matters).
+  Whisper stays the default until the owner has compared them on real speech.
 - No roadmap, pricing, or business-entity detail in this repo.
 - **The prompting knowledge base lives in `prompts/`** and ships with the repo. It was a
   separate repo (`senti-kb`) from 2026-08-19 to 2026-10-17 and was merged back with its
