@@ -28,6 +28,9 @@ screenshot — to cheap cloud APIs.
   `audio_ctx`; any failure or empty result falls back to the whisper request in the same turn.
   NOT measured: real voices, accents, noisy rooms, project names (where the hint matters).
   Whisper stays the default until the owner has compared them on real speech.
+  Long clips (TTS, 15 Nov 2026): 57 s of non-repeating speech, both engines 188 of 188 words. The same
+  paragraph spoken 4 times in a row (85 s): Parakeet 274 of 274, whisper 191 of 274 (it drops repeated
+  passages; pre-existing, not seen on non-repeating speech).
 - No roadmap, pricing, or business-entity detail in this repo.
 - **The prompting knowledge base lives in `prompts/`** and ships with the repo. It was a
   separate repo (`senti-kb`) from 2026-08-19 to 2026-10-17 and was merged back with its
@@ -146,6 +149,15 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
   model: `es` 840 ms, `auto` 1,590 ms (a detection pass), same clip, no `audio_ctx`; through the real path with `audio_ctx` 575 ms against 904 ms. base.en is English only, so config.sh
   resolves the model to Accurate for any other language. `clean_text` uses its English filler rules only
   for `en` ("um" is a word in German and Portuguese); the heavy-turn trigger stays English.
+- **Capture timing (Phase 2, 15 Nov 2026):** `wf.earlyStart` spawns the recorder first at key-down; the log
+  line `capture: first audio block N ms after key-down` read 372 to 410 ms on the owner's first 3 real
+  holds (an upper bound: it is written when the pill's meter first sees data; the audio itself starts
+  earlier). `WF_TAIL_MS` (100) keeps recording after key-up; bench-dictate, key-up to text: tail 0 equals
+  the pre-Phase-2 code within 10 ms (s02 489 ms both), the default 100 ms tail adds about 135 ms
+  to every dictation (s02 624 ms). That is the price of not cutting a last word; `WF_TAIL_MS=0` removes it. No pre-roll: an always-on microphone was ruled out.
+- **Paste (Phase 2):** everything pastes through `wf.deliver` (see the header comment there). First real
+  use: `paste: verified after 54 to 57 ms`, 3 of 3, in a non-terminal app. The "field did not change"
+  verdict is log-only (`wf.PASTE_WARN`) until it has been seen to be right on real fields.
 - **Recording:** `sox -d` → 16 kHz mono WAV, stopped with **SIGINT** (finalizes the header).
   `start` spawns sox first and sweeps orphans afterwards, detached (the sweep used to delay
   the start of recording by 0.15 s). `audio_ctx=768` applies below 14 s (768 frames of 20 ms

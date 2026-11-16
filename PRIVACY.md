@@ -93,6 +93,11 @@ Some of this is sent, as the tables above say. The rest never leaves the Mac.
 - After it pastes, Senti asks macOS Accessibility for the focused field's character count and cursor
   position, for up to 1.5 seconds, to check that the text arrived. It reads those two numbers, never
   the field's text, and never anything from a password field. Nothing from this check is sent or saved.
+- `snippets.txt` (phrases you say and the text Senti types for them) is read on your Mac and never sent.
+  The log records the length of an expansion, not its text.
+- With "Mute other audio while recording" on, Senti mutes and unmutes your sound output. It reads nothing.
+- The optional Parakeet engine runs on your Mac like the default one: the recording goes to a local
+  program (`parakeet-cli`) and nowhere else. Downloading its model is a request you make yourself.
 - The last result is kept in memory for 5 minutes so `⌃⌥L` can paste it again. It is never written to
   disk or to the log, and it is forgotten when the screen locks.
 

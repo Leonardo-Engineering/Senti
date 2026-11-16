@@ -64,7 +64,7 @@ All notable changes to Senti. Dates are in US Eastern time.
   Keyboard Entry): holding a key still dictates there, but Esc cannot cancel.
 - The recorder now starts first at key-down, before anything else, so less of your first word is missed.
   Senti keeps recording for 100 ms after you let go (`WF_TAIL_MS`, 0 turns it off; a brushed key gets
-  none), and logs how long after key-down the first audio arrived.
+  none; it adds about 0.13 s before the text appears), and logs how long after key-down the first audio arrived.
 - A muted microphone is now reported as a dead microphone. With dither on, sox wrote tiny non-zero values
   and Senti took the mute for a quiet room.
 - New logo: the geometric S, white on a blue badge.
