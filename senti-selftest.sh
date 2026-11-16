@@ -991,15 +991,28 @@ open(my $fh, ">", $f) or exit 1; select($fh); $| = 1; print "\0" x 44;
 while (1) { print "\0" x 2048; select(undef, undef, undef, 0.064); }
 FAKESOX
 /bin/chmod 700 "$FSOX"
-capsize() {   # capsize <tail ms> <hold seconds> → bytes recorded, through the real start and stop
-  WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS="$1" bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1
-  /bin/sleep "$2"
+# One run each, measured inside the run: the file size when stop is called against its final
+# size. Comparing two separate runs flapped on a slow runner (their start-up times differ).
+capgrow() {   # capgrow <tail ms> → "<bytes added after key-up> <new 'stop: tail' log lines>"
+  local n0 n1 s1 s2
+  n0="$(/usr/bin/grep -c 'stop: tail' "$WF_LOG" 2>/dev/null || true)"
+  WF_SOX="$FSOX" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1
+  /bin/sleep 1.0
+  s1="$(/usr/bin/stat -f %z "$HOME/.cache/senti/capture.wav" 2>/dev/null || echo 0)"
   WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS="$1" WF_URL="http://127.0.0.1:1" bash "$CFG/senti-dictate.sh" stop >/dev/null 2>&1
-  /usr/bin/stat -f %z "$HOME/.cache/senti/capture.wav" 2>/dev/null || echo 0
+  s2="$(/usr/bin/stat -f %z "$HOME/.cache/senti/capture.wav" 2>/dev/null || echo 0)"
+  n1="$(/usr/bin/grep -c 'stop: tail' "$WF_LOG" 2>/dev/null || true)"
+  echo "$((s2 - s1)) $((n1 - n0))"
 }
-T0=$(capsize 0 1.0); T3=$(capsize 300 1.0)
-[ "$((T3 - T0))" -ge 4096 ] && ok "a 300 ms tail records at least 2 more blocks after key-up ($T0 → $T3 bytes)" \
-                            || bad "the tail added no audio: $T0 bytes without, $T3 with 300 ms"
+read -r G3 L3 <<EOF
+$(capgrow 300)
+EOF
+read -r G0 L0 <<EOF
+$(capgrow 0)
+EOF
+[ "${G3:-0}" -ge 4096 ] && [ "$L3" = "1" ] && [ "$L0" = "0" ] \
+  && ok "a 300 ms tail keeps recording after key-up ($G3 bytes more; $G0 with the tail off)" \
+  || bad "the tail: $G3 bytes and $L3 log lines with 300 ms, $G0 bytes and $L0 log lines with it off"
 NT0="$(/usr/bin/grep -c 'stop: tail' "$WF_LOG" 2>/dev/null || true)"
 TAPOUT="$(WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS=300 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1; /bin/sleep 0.2; WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS=300 WF_URL="http://127.0.0.1:1" bash "$CFG/senti-dictate.sh" stop 2>/dev/null)"
 NT1="$(/usr/bin/grep -c 'stop: tail' "$WF_LOG" 2>/dev/null || true)"
