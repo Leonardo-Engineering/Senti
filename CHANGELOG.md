@@ -95,6 +95,11 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- Long dictations no longer lose sentences. On recordings over 30 seconds the speech engine skipped audio at
+  each 30-second boundary (a 34 second recording kept 58 of 119 words). Senti now asks for timestamps on
+  dictations of 25 seconds or more, which keeps them (119 of 119), for 0.1 to 0.2 s more.
+- With Parakeet selected, dictations of 30 seconds or more use the default engine: Parakeet garbled the
+  second half of 1 of 8 long recordings.
 - A paste waits until Option, Control, Fn and Shift are released, so a key still held from a hands-free
   toggle cannot turn it into another shortcut. If they stay held, the text goes to the clipboard.
 - Two results arriving within half a second no longer leave the first one on your clipboard, and a copy you
