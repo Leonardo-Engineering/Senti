@@ -1126,7 +1126,7 @@ function wf.titleHead(w)
   -- iTerm2), an unread count "(3) Inbox" or "Inbox (4)", an editor's unsaved dot. Compare without
   -- those, or a dictation into the SAME window is refused as "you switched windows".
   local raw = head
-  head = head:gsub("%s*[%(%[]%d%d?%d?[%)%]]", "")      -- a count anywhere: "(3) Inbox", "Inbox (4)", "Inbox (3) - me - Mail"
+  head = head:gsub("%s*[%(%[]%d%d?%d?[%)%]]", ""):gsub("%s*[%(%[]%d%d?%d?[,.]%d%d%d[%)%]]", "")   -- "(1,234)" too      -- a count anywhere: "(3) Inbox", "Inbox (4)", "Inbox (3) - me - Mail"
   -- Leading symbols only: ASCII punctuation and spaces, and the Unicode blocks U+2000 to U+28FF
   -- (general punctuation, arrows, shapes, dingbats, Braille spinner frames; UTF-8 lead byte E2 with
   -- a second byte 80 to A3). Letters in any script stay, so 2 tabs titled in Cyrillic or Chinese

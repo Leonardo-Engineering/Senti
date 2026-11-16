@@ -2,11 +2,16 @@
 
 All notable changes to Senti. Dates are in US Eastern time.
 
-## [Unreleased]
+## [1.1.1] 2026-11-16
 
 ### Fixed
 
-- Wording only, no behaviour change since 1.1.0: three lines in the 1.1.0 notes below described an
+- Dictionary rules fire again in Korean, where a particle is attached straight to the word ("cloud code를"
+  becomes "Claude Code를"), and in Lao, Khmer and Burmese text. 1.1.0 broke this.
+- An answer whose closing tag was cut off and that starts with a space or a newline is no longer pasted
+  with the literal `<r>`.
+- A count written with a thousands separator ("Inbox (1,234)") is ignored by the focus check.
+- Wording only: three lines in the 1.1.0 notes below described an
   earlier state of the same release. A hold with a click ends quietly only when it is under 3 seconds.
   `uninstall.sh` turns Hammerspoon's icons back on only when Senti's config was the one in place. The
   focus check ignores counts of up to 3 digits in a title, not any number.

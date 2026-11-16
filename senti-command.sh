@@ -60,6 +60,7 @@ RESULT="$(printf '%s' "$OUT" | /usr/bin/perl -0777 -ne 'my @o = /<r>/g; if (@o =
 # Fallback only if the model omitted the tags. An EMPTY tagged answer ("delete this") used to fall
 # through here and paste the literal <r></r> over the selection; it now ends as an empty answer.
 if blank "$RESULT"; then
+  OUT="$(printf '%s' "$OUT" | /usr/bin/perl -0777 -pe 's/^\s+//')"   # a space or newline before the tag
   case "$OUT" in
     *"<r>"*"</r>"*) : ;;                          # a closed, empty pair: an empty answer
     "<r>"*) RESULT="${OUT#<r>}" ;;                # it starts with the tag and the closing one was cut off
