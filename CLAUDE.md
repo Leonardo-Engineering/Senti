@@ -149,6 +149,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 | `senti-selftest.sh` | the full check suite — run before believing anything works |
 | `senti-model.sh` | Fast/Accurate whisper model switch |
 | `app/make-icon.sh` | SVG → resvg → iconutil (no Pillow, no Python) |
+| `tools/models-watch.py` (repo only) | weekly check (GitHub Action `models-watch.yml`): registry and `prompts/models` against OpenRouter's public list; opens an issue, edits nothing. Update procedure: CONTRIBUTING.md, "Keeping the model knowledge current" |
 | `uninstall.sh` (repo only) | asks, then removes the LaunchAgent, restores `init.lua`, removes app, cache, logs; asks again for keys and models |
 
 - **Engine:** `whisper-cpp` (brew) kept warm in Metal by launchd `io.senti.server`

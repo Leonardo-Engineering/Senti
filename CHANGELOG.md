@@ -6,6 +6,9 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Added
 
+- A weekly models watch (`tools/models-watch.py`, run by a GitHub Action): it reports listed models that are
+  gone or changed price, newer models from the same labs, and models with no prompting section, and opens
+  an issue. It edits nothing.
 - Optional Parakeet engine (Speed, then Parakeet), through the `parakeet-cli` that whisper-cpp installs. You
   download the model yourself (669 MB). Measured here, key-up to text: 0.40 s against 0.50 s on a 3.7 s clip, 0.50 s
   against 0.58 s at 12.8 s, 0.62 s against 1.09 s at 20.8 s. Whisper stays the default and is the fallback when Parakeet fails.
@@ -98,6 +101,8 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- 2 OpenRouter list prices that had changed: Kimi K3.1 Pro ($2.30 in, $11.50 out) and DeepSeek v4.1 Flash
+  ($0.14 in, $0.42 out).
 - Long dictations no longer lose sentences. On recordings over 30 seconds the speech engine skipped audio at
   each 30-second boundary (a 34 second recording kept 58 of 119 words). Senti now asks for timestamps on
   dictations of 25 seconds or more, which keeps them (119 of 119), for 0.1 to 0.2 s more.

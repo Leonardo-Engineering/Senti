@@ -1,0 +1,49 @@
+name: Models watch
+
+# Once a week: are the models Senti lists still offered at the listed price, has a lab Senti lists
+# released something newer, and does every listed model have its section in prompts/models?
+# The job only reads (the repo and OpenRouter's public model list, no key) and writes one issue.
+# Writing the knowledge is a person's job: see CONTRIBUTING.md, "Keeping the model knowledge current".
+
+on:
+  schedule:
+    - cron: "17 14 * * 1"   # Mondays, 14:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: models-watch
+  cancel-in-progress: true
+
+jobs:
+  watch:
+    name: Compare the registry with the labs' current lists
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run the watch
+        id: watch
+        run: |
+          set -u
+          python3 tools/models-watch.py > report.md || true
+          cat report.md
+          echo "changes=$(tail -1 report.md | sed 's/^CHANGES: //')" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the issue
+        if: steps.watch.outputs.changes != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -u
+          n="$(gh issue list --state open --search 'in:title "Models watch"' --json number -q '.[0].number // empty')"
+          if [ -n "$n" ]; then gh issue edit "$n" --body-file report.md
+          else gh issue create --title "Models watch: the model knowledge needs an update" --body-file report.md; fi
