@@ -164,8 +164,9 @@ curl -L -o ~/.local/share/whisper-models/ggml-base.en.bin \
 ```
 
 **Parakeet (optional).** NVIDIA's Parakeet model runs through the `parakeet-cli` that Homebrew's
-whisper-cpp already installs. On an M-series Mac it transcribed a 13 second clip in 0.44 seconds
-against 0.92 for the default model. It knows 25 European languages and takes no vocabulary hint, so
+whisper-cpp already installs. Measured on one M-series Mac, key-up to text: a 4 second clip took 0.40
+seconds against 0.50 for the default model, a 13 second clip 0.50 against 0.58, and a 21 second clip
+0.62 against 1.09. The gain is mostly on dictations longer than 14 seconds. It knows 25 European languages and takes no vocabulary hint, so
 project names lean on your `replacements.txt`. Download the model (669 MB), check it, then pick
 Speed, then Parakeet in the menu bar. If Parakeet fails on a clip, Senti uses the default model for it.
 

@@ -7,8 +7,8 @@ All notable changes to Senti. Dates are in US Eastern time.
 ### Added
 
 - Optional Parakeet engine (Speed, then Parakeet), through the `parakeet-cli` that whisper-cpp installs. You
-  download the model yourself (669 MB). Measured here: 0.33 s against 0.43 s on a 3.7 s clip and 0.44 s
-  against 0.92 s on a 12.8 s clip. Whisper stays the default and is the fallback when Parakeet fails.
+  download the model yourself (669 MB). Measured here, key-up to text: 0.40 s against 0.50 s on a 3.7 s clip, 0.50 s
+  against 0.58 s at 12.8 s, 0.62 s against 1.09 s at 20.8 s. Whisper stays the default and is the fallback when Parakeet fails.
 - Snippets: say a phrase on its own and Senti types the text you set for it (`~/.config/senti/snippets.txt`,
   menu: Edit snippets). Only a whole dictation that is exactly the phrase expands. The file stays on your Mac.
 - Optional: mute other audio while recording (menu). Sound comes back when the recording ends, and at the
