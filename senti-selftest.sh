@@ -1074,7 +1074,7 @@ FSOX2="$HOME/.cache/senti/fakesox2"; FCURL="$HOME/.cache/senti/fakecurl"; CARGS=
 /bin/cat > "$FSOX2" <<'FAKESOX'
 #!/usr/bin/perl
 use strict; my @a = @ARGV;
-if (grep { $_ eq "stat" } @a) { printf STDERR "Maximum amplitude:     0.500000\nLength (seconds):      2.000000\n"; exit 0; }
+if (grep { $_ eq "stat" } @a) { printf STDERR "Maximum amplitude:     0.500000\nLength (seconds):      %s\n", ($ENV{FAKE_LEN} || "2.000000"); exit 0; }
 my $f = $a[-1]; $SIG{INT} = sub { exit 0 };
 open(my $fh, ">", $f) or exit 1; select($fh); $| = 1; print "\0" x 44;
 while (1) { print "\1" x 2048; select(undef, undef, undef, 0.064); }
@@ -1092,6 +1092,11 @@ O3="$(say_as auto 'Bom, um dia.')";          A3="$(/usr/bin/grep -c '^language=a
 [ "$A1$A2$A3" = "111" ] && ok "each transcription request carries the chosen language (es, en, auto)" || bad "language in the request: es=$A1 en=$A2 auto=$A3"
 [ "$O2" = "Open the file. " ] || [ "$O2" = "Open the file." ] && ok "English keeps its filler rules" || bad "English cleanup gave '$O2'"
 case "$O1|$O3" in "Um, quiero um café."*"|Bom, um dia."*) ok "outside English, 'um' is kept as a word and only uh/erm/hmm are dropped" ;; *) bad "non-English cleanup gave '$O1' and '$O3'" ;; esac
+# Long dictations: the request asks for timestamps from 25 s up (without them whisper skipped
+# whole sentences at each 30 s window), and never for a short clip.
+O4="$(FAKE_LEN=41.500000 say_as en 'Long words.')"; TS1="$(/usr/bin/grep -c '^no_timestamps=false$' "$CARGS" 2>/dev/null || true)"; CX1="$(/usr/bin/grep -c '^audio_ctx=' "$CARGS" 2>/dev/null || true)"
+O5="$(say_as en 'Short words.')";                    TS2="$(/usr/bin/grep -c '^no_timestamps=false$' "$CARGS" 2>/dev/null || true)"
+[ "$TS1" = "1" ] && [ "$CX1" = "0" ] && [ "$TS2" = "0" ] && ok "a dictation of 25 s or more asks whisper for timestamps, so no sentence is skipped at a 30 s boundary" || bad "timestamps on long clips: long=$TS1 (audio_ctx $CX1) short=$TS2"
 # Parakeet (optional engine): a stand-in CLI and model. Default off; on only when picked AND
 # present AND the language is one it knows; a failure falls back to the whisper request.
 FPK="$HOME/.cache/senti/fakeparakeet"; FPM="$HOME/.cache/senti/fake-parakeet.bin"; : > "$FPM"
@@ -1106,6 +1111,8 @@ pk_say() { WF_SOX="$FSOX2" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" start >/dev/
 /bin/rm -f "$CARGS"; P1="$(pk_say)"; P1C="$([ -e "$CARGS" ] && echo called || echo no)"
 P2="$(PK_FAIL=1 pk_say)"
 [ "$P1" = "From parakeet" ] && [ "$P1C" = "no" ] && ok "with Parakeet on, the clip goes to parakeet-cli and the whisper server is not called" || bad "parakeet path gave '$P1' (whisper $P1C)"
+P3="$(FAKE_LEN=45.000000 pk_say)"
+[ "$P3" = "From whisper" ] && ok "with Parakeet on, a clip of 30 s or more still goes to whisper" || bad "long clip with Parakeet on gave '$P3'"
 [ "$P2" = "From whisper" ] && ok "when parakeet-cli fails the same clip is transcribed by whisper" || bad "parakeet failure gave '$P2'"
 PKA="$(/bin/cat "$CARGS.pk" 2>/dev/null | /usr/bin/tr '\n' ' ')"
 case "$PKA" in *"-f $HOME/.cache/senti/capture.wav"*) ok "parakeet-cli receives the audio path and nothing else of the user's" ;; *) bad "parakeet-cli arguments: $PKA" ;; esac

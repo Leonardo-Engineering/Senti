@@ -27,7 +27,15 @@ screenshot — to cheap cloud APIs.
   model file and binary exist and the language is one of its 25; no vocabulary hint, no
   `audio_ctx`; any failure or empty result falls back to the whisper request in the same turn.
   NOT measured: real voices, accents, noisy rooms, project names (where the hint matters).
-  Whisper stays the default until the owner has compared them on real speech.
+  Decided 15 Nov 2026 after a test on real speech (LibriSpeech, 120 utterances clean, noisy and quiet, 8 long
+  clips; report in `.claude/tmp/team/parakeet-wer-report.md`): whisper STAYS the default. Under 30 s Parakeet's
+  WER was a little lower (clean 3.7% against 4.5%, noisy 4.6% against 8.2%) but not significantly on clean
+  speech, LibriSpeech is very likely in its training data, and it has no vocabulary hint and 25 languages. It
+  garbled the second half of 1 of 8 clips over 30 s, so `senti-dictate.sh` uses it only below 30 s.
+- **Long clips need timestamps (load-bearing).** The server runs `--no-timestamps`; on clips over 30 s that
+  made whisper skip whole sentences at each window boundary (34 s clip: 58 of 119 words; 92 s: 212 of 244).
+  `senti-dictate.sh` sends `no_timestamps=false` from 25 s up (119 and 242 words; +0.1 to 0.2 s). Never
+  remove it, and never judge long-clip behaviour from synthetic voices: 57 s of TTS showed no loss at all.
   Long clips (TTS, 15 Nov 2026): 57 s of non-repeating speech, both engines 188 of 188 words. The same
   paragraph spoken 4 times in a row (85 s): Parakeet 274 of 274, whisper 191 of 274 (it drops repeated
   passages; pre-existing, not seen on non-repeating speech).

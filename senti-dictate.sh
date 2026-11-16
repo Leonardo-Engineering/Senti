@@ -224,7 +224,11 @@ EOF
   # Optional engine: Parakeet (config.sh decides; default is whisper). One process per clip,
   # under a deadline; only the audio path is on its command line. If it fails or returns
   # nothing, fall through to the whisper server below, so no words are lost to the option.
-  if [ "${WF_ENGINE:-whisper}" = "parakeet" ]; then
+  # Parakeet only below 30 s: on real recordings it garbled the second half of 1 of 8 clips
+  # longer than that (a 65 s one), where whisper with timestamps kept the words (15 Nov 2026).
+  local plong=0
+  case "${dur%%.*}" in ''|*[!0-9]*) plong=1 ;; *) [ "${dur%%.*}" -ge 30 ] && plong=1 ;; esac
+  if [ "${WF_ENGINE:-whisper}" = "parakeet" ] && [ "$plong" = 0 ]; then
     local praw prc
     praw="$(/usr/bin/perl -e 'alarm shift; exec @ARGV' 30 "$WF_PARAKEET_CLI" -m "$WF_PARAKEET_MODEL" -t 6 -np -f "$WF_AUDIO" 2>/dev/null)"
     prc=$?
@@ -263,6 +267,12 @@ EOF
   # menu can change it without reloading the model.
   args=(-F file=@"$WF_AUDIO" -F temperature=0.0 -F response_format=text -F language="${WF_LANG:-en}")
   [ -n "$ctx_arg" ] && args+=(-F audio_ctx="$ctx_arg")
+  # Long clips need timestamps. The server runs with --no-timestamps, and without them whisper
+  # cannot place itself after each 30 s window: it jumped ahead and dropped whole sentences at
+  # the boundary (real recordings, 15 Nov 2026: 58 of 119 words kept on a 34 s clip, 212 of 244
+  # on a 92 s one; with timestamps 119 and 242). Costs 0.1 to 0.2 s, so only from 25 s up, and
+  # also when the length is unknown. The text format still returns plain text.
+  case "$dsec" in ''|*[!0-9]*) args+=(-F no_timestamps=false) ;; *) [ "$dsec" -ge 25 ] && args+=(-F no_timestamps=false) ;; esac
   # The hint goes in from a file (-F name=<file sends the content as the field value,
   # unparsed, so ';' in a branch name is safe): on argv, its window-title text was
   # readable by every process via ps for the length of the call. The ctx- prefix puts
