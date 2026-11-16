@@ -106,6 +106,27 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Fixed
 
+- From an audit of the code on 15 November 2026, each with a reproduction:
+  - A window title that changes by itself (a spinner, an unread count, an editor's unsaved dot) no longer
+    reads as "you switched windows", which made Senti refuse to type.
+  - With a provider and a text model both pinned, screenshot requests went to the provider's default
+    model. They now use the pinned model.
+  - Command mode no longer reads the selection from a window you moved to after speaking; your words are
+    handed back.
+  - Context mode with no screenshot puts what you said on the clipboard (it was dropped).
+  - A copy you make while a Command request runs is kept on success and on Esc, not only on failure.
+  - A hold key pressed while Senti is still writing the last result now says so, and that result is
+    still typed once you let go.
+  - A click during the first 1.5 seconds of a hold cancels like a key does (right Command+click is a
+    shortcut, not a dictation).
+  - Command mode's 75 second limit starts when its request starts, as in Prompt and Context.
+  - A dropped filler hands back its question mark or exclamation mark; dictionary rules do not fire
+    inside accented words; text cut for heavy turns never ends in half a character.
+  - A language code whisper does not know in `config.local.sh` falls back to English; the server used to
+    fail to start with it.
+  - A key-up that beats the recorder's start stops that recorder (it could keep the microphone open).
+  - Smaller: `brain-map.txt` parsing, a dry run that read keys, uninstall leaving an empty cache folder,
+    a config backup that could be overwritten, very large selections, notices that named the wrong reason.
 - Family rules the labs' current pages no longer support were corrected or removed (effort defaults and
   values per model, a claim about DeepSeek system prompts, old Gemini and Gemma details, and a
   "never ask it to double-check" line that is right for Opus and wrong for Sonnet 5.5 and Haiku 5.5).

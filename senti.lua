@@ -933,6 +933,9 @@ function wf.abandonTurn()
   local p = wf.pending
   wf.pending = nil
   if p and p.turn ~= abandoned then p = nil end   -- left over from an earlier turn
+  if p and p.clip and p.clipCount and hs.pasteboard.changeCount() ~= p.clipCount then
+    return nil                                  -- the user copied something since our Cmd+C: theirs stays
+  end
   if p and p.clip then
     wf.restoreClipboard(p.clip, hs.pasteboard.changeCount())
     -- runCommand's copy poll may still be waiting for Cmd+C. This count lets it tell a
@@ -972,9 +975,13 @@ if wf.escTap then wf.escTap:stop() end
 -- right Option+E for an accent, Fn+arrow), not dictation: cancel quietly and let the key through.
 -- Only early in the hold, so a stray key in the middle of a long dictation cannot throw it away.
 local SHORTCUT_WINDOW = 1.5
-wf.escTap = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, function(e)
+local ET = hs.eventtap.event.types
+wf.escTap = hs.eventtap.new({ ET.keyDown, ET.leftMouseDown, ET.rightMouseDown, ET.otherMouseDown }, function(e)
   local ok, acted = pcall(function()
-    if e:getKeyCode() ~= ESC then
+    -- a click counts like a key: right Command+click (open in a new tab) or right Option+drag is a
+    -- shortcut, not a dictation, and used to end in "Nothing was transcribed"
+    local isKey = (e.getType == nil) or e:getType() == ET.keyDown
+    if not isKey or e:getKeyCode() ~= ESC then
       if wf.state == "recording" and wf.held ~= nil and wf.heldAt
          and hs.timer.secondsSinceEpoch() - wf.heldAt < SHORTCUT_WINDOW then
         wf.cancelTurn(true)
@@ -1109,7 +1116,12 @@ end
 function wf.titleHead(w)
   local ok, t = pcall(function() return w and w:title() end)
   if not ok or type(t) ~= "string" then return nil end
-  return (t:match("^(.-) — ") or t)
+  local head = (t:match("^(.-) — ") or t)
+  -- A title can change by itself during a turn: a spinner glyph in front (Claude Code in Ghostty or
+  -- iTerm2), an unread count "(3) Inbox" or "Inbox (4)", an editor's unsaved dot. Compare without
+  -- those, or a dictation into the SAME window is refused as "you switched windows".
+  head = head:gsub("^%(%d+%)%s*", ""):gsub("%s*[%(%[]%d+[%)%]]%s*$", ""):gsub("^[^%w]+", ""):gsub("%s+$", "")
+  return head
 end
 -- Focus moved: another window, or the same window now showing another tab or document (its title
 -- head changed). Only the head is compared, because the rest of a terminal title animates.
@@ -1196,7 +1208,7 @@ function wf.forgetLast() LAST = nil end
 function wf.pasteLast()
   local t = lastResult()
   if not t then wf.notify("Nothing to paste again.\nSenti keeps the last result for 5 minutes.", 3); return end
-  if wf.state ~= "idle" then return end
+  if wf.state ~= "idle" then wf.notify("Senti is busy.\nPress ⌃⌥L again when it finishes.", 3); return end
   wf.log("paste last: " .. #t .. " chars")
   wf.deliver(t, { label = "paste last: pasted", again = true, modWait = 1.0 })
 end
@@ -1222,6 +1234,10 @@ function wf.deliver(text, opts)
     local old = wf.txn
     for _, k in ipairs({ "timer", "poll", "late" }) do if old[k] then old[k]:stop(); old[k] = nil end end
     old.done = true; saved = old.saved; wf.txn = nil
+  elseif wf.modWait and wf.modWaitSaved then
+    -- A result is still waiting for keys to come up. It inherited the user's clipboard; so does
+    -- the one that replaces it (a snapshot now would save Senti's own earlier text).
+    saved = wf.modWaitSaved
   else
     saved = opts.saved or wf.saveClipboard()
   end
@@ -1278,16 +1294,22 @@ function wf.deliver(text, opts)
   -- A modifier is still down (a hands-free toggle just released, or the next hold key).
   local waited = 0
   if wf.modWait then wf.modWait:stop() end
+  wf.modWaitSaved = saved
+  -- A hold key pressed while the last turn was still working keeps a modifier down: wait longer
+  -- for it (the user was just told to let go), so that result is still typed.
+  local limit = opts.modWait or ((wf.busyAt and hs.timer.secondsSinceEpoch() - wf.busyAt < 6) and 2.0 or 0.3)
   wf.modWait = hs.timer.doEvery(0.02, function()
     waited = waited + 0.02
     local clear = not modsHeld()
-    if not clear and waited < (opts.modWait or 0.3) then return end
-    wf.modWait:stop(); wf.modWait = nil
-    if clear and wf.state == "idle" and not (opts.checkFocus and wf.focusMoved()) then go(waited); return end
+    if not clear and waited < limit then return end
+    wf.modWait:stop(); wf.modWait = nil; wf.modWaitSaved = nil
+    local moved = opts.checkFocus and wf.focusMoved()
+    if clear and wf.state == "idle" and not moved then go(waited); return end
     -- Still held, a new recording started, or focus moved: do not send Cmd+V into that.
+    local why = (not clear) and "keys were still held" or (moved and "you switched windows" or "a new recording started")
     wf.setPrivateClipboard(text)
-    wf.log("paste: not sent after waiting " .. math.floor(waited * 1000) .. " ms (keys held, a new recording, or focus moved); " .. #text .. " chars on the clipboard")
-    wf.notify("Senti did not type it because keys were still held.\nIt's on the clipboard. ⌃⌥L pastes it.", 5, wf.TONE.warn)
+    wf.log("paste: not sent after waiting " .. math.floor(waited * 1000) .. " ms (" .. why .. "); " .. #text .. " chars on the clipboard")
+    wf.notify("Senti did not type it because " .. why .. ".\nIt's on the clipboard. ⌃⌥L pastes it.", 5, wf.TONE.warn)
   end)
 end
 
@@ -1392,8 +1414,12 @@ end
 -- wait for a Cmd+C that never changes the clipboard.
 function wf.axSelection()
   local ok, res = pcall(function()
-    local el = hs.axuielement.systemWideElement():attributeValue("AXFocusedUIElement")
+    local sys = hs.axuielement.systemWideElement()
+    pcall(function() sys:setTimeout(0.5) end)      -- a hung front app must not freeze the pill (see wf.axCounts)
+    local el = sys:attributeValue("AXFocusedUIElement")
+    pcall(function() sys:setTimeout(0) end)
     if not el then return nil end
+    pcall(function() el:setTimeout(0.5) end)
     local sel = el:attributeValue("AXSelectedText")
     if type(sel) ~= "string" then return nil end
     if sel ~= "" then return sel end
@@ -1407,6 +1433,12 @@ function wf.axSelection()
 end
 
 function wf.runCommand(command, turn)
+  -- The selection is read from whatever is focused NOW and sent to the AI. If focus left the window
+  -- the user spoke into, that would upload text from another window: hand the words back instead.
+  if wf.focusMoved() then
+    wf.pending = nil; wf.setState("idle"); wf.sweepCache()
+    wf.handBack(command, "focus moved before command"); return
+  end
   wf.hud.show("thinking")
   if wf.cmdPoll then wf.cmdPoll:stop(); wf.cmdPoll = nil end   -- an abandoned turn's poll
   wf.settlePaste()   -- an earlier paste may still hold the user's clipboard: put it back before we snapshot
@@ -1453,6 +1485,8 @@ end
 -- What happens once the selection is known (from Accessibility or from the copy).
 function wf.commandWith(command, turn, prevClip, sel, copied)
   wf.cmdCopyCount = copied and hs.pasteboard.changeCount() or nil   -- the clipboard as our Cmd+C left it
+  if copied and wf.pending and wf.pending.turn == turn then wf.pending.clipCount = wf.cmdCopyCount end
+  wf.aiStarting()                               -- the 75 s clock starts at the request, as in Prompt and Context
   do
     local f = io.open(wf.SELFILE, "w"); if f then f:write(sel); f:close() end
     wf.log("command: " .. #command .. " chars on " .. #sel .. " selected chars")  -- not the text itself
@@ -1497,7 +1531,8 @@ function wf.commandWith(command, turn, prevClip, sel, copied)
       end
       -- Replaces the selection, or inserts at the cursor. The clipboard to put back is the one
       -- from before our Cmd+C, when there was one.
-      wf.deliver(out, { label = "command: applied", saved = copied and prevClip or nil, checkFocus = true })
+      wf.deliver(out, { label = "command: applied", checkFocus = true,
+                        saved = (copied and hs.pasteboard.changeCount() == wf.cmdCopyCount) and prevClip or nil })
     end)
     wf.aiTask = task
   end
@@ -1995,7 +2030,7 @@ function wf.awaitShot(tries, cb)
   local f = io.open(wf.SHOT, "r")
   if f then f:close(); cb(true); return end
   if tries <= 0 then cb(false); return end
-  hs.timer.doAfter(0.25, function() wf.awaitShot(tries - 1, cb) end)
+  wf.shotTimer = hs.timer.doAfter(0.25, function() wf.shotTimer = nil; wf.awaitShot(tries - 1, cb) end)   -- on wf.*: never collected
 end
 
 -- Run the vision engine; surface failures instead of silently inserting nothing.
@@ -2140,9 +2175,11 @@ function wf.runAIMode(raw, turn)
       if wf.staleTurn(turn) then return end
       if has then wf.runVision(raw, "context", turn)
       else
+        wf.pending = nil
         wf.setState("idle"); wf.sweepCache()
-        wf.log("context: no screenshot — Screen Recording not granted")
-        wf.notify("Context mode needs Screen Recording.\nSystem Settings ▸ Privacy ▸ Screen Recording →\nenable Hammerspoon, then relaunch it", 5, wf.TONE.warn)
+        wf.setPrivateClipboard(raw)              -- never drop what was said
+        wf.log("context: no screenshot — Screen Recording not granted; " .. #raw .. " chars on the clipboard")
+        wf.notify("Context mode needs Screen Recording.\nSystem Settings ▸ Privacy ▸ Screen Recording →\nenable Hammerspoon, then relaunch it.\nWhat you said is on the clipboard.", 6, wf.TONE.warn)
         hs.execute("/usr/bin/open 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'")
       end
     end)
@@ -2577,6 +2614,16 @@ function wf.sideKeyStillDown(e, code)
   return ok and down == true
 end
 
+-- A hold key pressed while the last turn is still working used to do nothing at all: no recording,
+-- no word of why, and its modifier then made the finished result wait and miss its paste.
+function wf.busyPress()
+  local now = hs.timer.secondsSinceEpoch()
+  if wf.busyAt and now - wf.busyAt < 2 then return end
+  wf.busyAt = now
+  wf.log("tap: hold key pressed while working; ignored")
+  wf.notify("Senti is still writing the last one.\nLet go, and speak again when it lands.", 3)
+end
+
 function wf.armTap()
   if wf.flagWatcher then wf.flagWatcher:stop() end
   wf.flagWatcher = hs.eventtap.new({hs.eventtap.event.types.flagsChanged}, function(e)
@@ -2592,14 +2639,17 @@ function wf.armTap()
       elseif code == wf.HOLD_VERBATIM then
         if flags.alt == true and wf.held == nil and wf.state == "idle" then
           wf.held = code; wf.heldAt = hs.timer.secondsSinceEpoch(); wf.log("tap: right⌥ down"); wf.beginCapture("verbatim")
+        elseif flags.alt == true and wf.held == nil and wf.state == "working" then wf.busyPress()
         end
       elseif code == wf.HOLD_PROMPT then
         if flags.cmd == true and wf.held == nil and wf.state == "idle" then
           wf.held = code; wf.heldAt = hs.timer.secondsSinceEpoch(); wf.log("tap: right⌘ down"); wf.snapAndCapture("prompt")
+        elseif flags.cmd == true and wf.held == nil and wf.state == "working" then wf.busyPress()
         end
       elseif code == wf.HOLD_COMMAND then
         if flags.fn == true and wf.held == nil and wf.state == "idle" then
           wf.held = code; wf.heldAt = hs.timer.secondsSinceEpoch(); wf.log("tap: Fn down"); wf.snapAndCapture("command")
+        elseif flags.fn == true and wf.held == nil and wf.state == "working" then wf.busyPress()
         end
       end
     end)
