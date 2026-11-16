@@ -61,16 +61,34 @@ if [ -n "$PREF" ] && [ "$PREF" != "auto" ]; then
     [ "$(fm "$f" family)" = "$PREF" ] && { CHOSEN="$f"; break; }
   done
 elif [ -n "$HINT" ] || [ -n "$TITLE" ]; then
-  # App name first, window title second. `break 2` leaves both loops on the first hit.
-  for probe in "$HINT" "$TITLE"; do
-    [ -n "$probe" ] || continue
+  # App name first: a whole-word match of the file's `match:` regex ("Grok", "ChatGPT", a model id).
+  if [ -n "$HINT" ]; then
     for f in "$KB"/*.md; do
       [ -f "$f" ] || continue
       fam="$(fm "$f" family)"; [ "$fam" = "universal" ] && continue
       m="$(fm "$f" match)"; [ -z "$m" ] && continue
-      if printf '%s' "$probe" | /usr/bin/grep -qiE "$m"; then CHOSEN="$f"; break 2; fi
+      if printf '%s' "$HINT" | /usr/bin/grep -qiwE "$m"; then CHOSEN="$f"; break; fi
     done
-  done
+  fi
+  # Then the window title, by a STRICTER rule, because a title is full of ordinary words: "glm.hpp",
+  # "Minimax algorithm - Wikipedia", "Grokking Algorithms", "Sonnet 18" and "vertex.glsl" all matched a
+  # model family before 15 Nov 2026. `title_word:` must appear as a whole word (claude, chatgpt, codex:
+  # names that are rarely anything else); `title_exact:` must BE one segment of the title, split on
+  # " — ", " - ", " | " and " · " ("Gemini - Google Chrome" has the segment "Gemini").
+  if [ -z "$CHOSEN" ] && [ -n "$TITLE" ]; then
+    SEGS="${TITLE// — /
+}"; SEGS="${SEGS// - /
+}"; SEGS="${SEGS// | /
+}"; SEGS="${SEGS// · /
+}"
+    for f in "$KB"/*.md; do
+      [ -f "$f" ] || continue
+      fam="$(fm "$f" family)"; [ "$fam" = "universal" ] && continue
+      tw="$(fm "$f" title_word)"; te="$(fm "$f" title_exact)"
+      if [ -n "$tw" ] && printf '%s' "$TITLE" | /usr/bin/grep -qiwE "$tw"; then CHOSEN="$f"; break; fi
+      if [ -n "$te" ] && printf '%s\n' "$SEGS" | /usr/bin/sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | /usr/bin/grep -qixE "$te"; then CHOSEN="$f"; break; fi
+    done
+  fi
 fi
 
 # ── Exact model, not just the family ────────────────────────────────────────────────
@@ -135,7 +153,7 @@ app_model() {
     [ -n "$probe" ] || continue
     while IFS='|' read -r id rx; do
       [ -n "$id" ] && [ -n "$rx" ] || continue
-      if printf '%s' "$probe" | /usr/bin/grep -qiE "$rx"; then printf '%s' "$id"; return 0; fi
+      if printf '%s' "$probe" | /usr/bin/grep -qiwE "$rx"; then printf '%s' "$id"; return 0; fi
     done <<EOF
 $(/usr/bin/perl -0777 -ne 'while (/^## Model: (\S+)\s*\n\s*app:\s*([^\n]+)/mg) { print "$1|$2\n" }' "$file" 2>/dev/null)
 EOF

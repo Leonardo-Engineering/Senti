@@ -44,8 +44,8 @@ at your cursor.
   OpenAI's guide for its largest model says to describe the goal and leave out the recipe, while its
   smallest model does better when told the exact output shape; Anthropic documents each current Claude
   model on its own page. So the knowledge in `prompts/models/*.md` has a section per model, 20 in all
-  (4 Claude, 5 OpenAI, 2 Gemini, Grok, Kimi, Mistral, Qwen, GLM, DeepSeek, MiniMax), each written from
-  that lab's own pages
+  (6 Claude, of which 4 are current, 5 OpenAI, 2 Gemini, Grok, Kimi, Mistral, Qwen, GLM, DeepSeek,
+  MiniMax), written from that lab's own pages
   with the source links and the date beside it. Edit those files and the behavior changes.
 - **It knows where you are.** Senti reads the name of the app in front and its window title. ChatGPT
   resolves to the model ChatGPT runs and Codex to the model in Codex's own config; in a Claude Code
@@ -81,8 +81,9 @@ brief.
 A small pill at the bottom of the screen shows your live microphone level while you speak, then
 disappears. Things worth knowing:
 
-- **Cancelling.** Press Esc while the pill is showing. A key or a click in the first 1.5 seconds of a hold
-  also cancels quietly, so right ⌘+C, right ⌘+click or Fn+arrow still work as shortcuts. Esc cannot cancel while an app
+- **Cancelling.** Press Esc while the pill is showing. A key pressed in the first 1.5 seconds of a hold
+  also cancels quietly, so right ⌘+C or Fn+arrow still work as shortcuts. A click does not cancel (you
+  may be placing the cursor), but a hold with a click and no speech ends without an alert. Esc cannot cancel while an app
   has secure keyboard entry on (a password field, or Terminal's Secure Keyboard Entry); the menu says
   when that is the case.
 - **Toggles.** `⌃⌥D`, `⌃⌥P` and `⌃⌥C` start a recording, and the same shortcut stops it.

@@ -248,12 +248,17 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
   pages (research reports in `.claude/tmp/team/kb-*-report.md`). Which one is injected: Claude Code's
   transcript (`cc_model`), Codex's `~/.codex/config.toml` top-level `model` key (`codex_model`, only when
   Codex is in front, value charset-checked), else the section whose `app: <regex>` line matches the app
-  name or window title (`app_model`: ChatGPT is gpt-6-sol, Codex gpt-6.1-sol, Gemini gemini-4-hydrogen).
+  name or window title, by whole word. A window TITLE picks a family by a stricter rule than an app name
+  (`title_word:` whole word, `title_exact:` one whole segment), because "glm.hpp", "Minimax algorithm" and
+  "Sonnet 18" matched a family before (`app_model`: ChatGPT is gpt-6-sol, Codex gpt-6.1-sol, Gemini gemini-4-hydrogen).
   The `app:` line is never injected. DeepSeek and MiniMax publish no prompting guide; their sections hold
   only what their API pages state. `tools/models-watch.py` reports any listed model without a section.
   Eval (15 Nov 2026, `senti-eval.sh ab oldkb base`, old knowledge against new on the new resolver): 8 ChatGPT
   cases 10-8-6 against a noise row of 6-8-10; the 19-case set 20-18-19 against 20-19-18. No measurable change
-  either way on this judge (it sees the idea and the destination, not the model's guide). Shipped for
+  either way on this judge (it sees the idea and the destination, not the model's guide). The Claude Code cases
+  ran with no transcript, so they got the family digest: the rewritten Claude sections were NOT in this eval.
+  Latency, 10 calls each with nothing else running: median 4.4 s old, 5.0 s new, ranges overlapping (179 more
+  input tokens). Shipped for
   correctness, not for a measured gain; do not cite it as an improvement.
 - **Prompt intelligence:** one call, context-heavy. Both prompt paths assemble: shared craft
   (`prompts/prompt-craft.md`) + vault digest (`senti-brain.sh`) + session memory

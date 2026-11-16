@@ -7,8 +7,8 @@ All notable changes to Senti. Dates are in US Eastern time.
 ### Added
 
 - Prompts are written for the exact model, not only its lab. The knowledge base has a section per model
-  (20: the 4 current Claude models, 5 OpenAI models, 2 Gemini models, Grok, Kimi, Mistral, Qwen, GLM,
-  DeepSeek and MiniMax), each written from that lab's own pages on 15 Nov 2026. ChatGPT resolves to the
+  (20: 6 Claude models, of which the 4 current ones were rewritten, 5 OpenAI models, 2 Gemini models, Grok,
+  Kimi, Mistral, Qwen, GLM, DeepSeek and MiniMax), written from that lab's own pages on 15 Nov 2026. ChatGPT resolves to the
   model ChatGPT runs, Codex to the model in its own config.
 - A weekly models watch (`tools/models-watch.py`, run by a GitHub Action): it reports listed models that are
   gone or changed price, newer models from the same labs, and models with no prompting section, and opens
@@ -117,14 +117,17 @@ All notable changes to Senti. Dates are in US Eastern time.
   - A copy you make while a Command request runs is kept on success and on Esc, not only on failure.
   - A hold key pressed while Senti is still writing the last result now says so, and that result is
     still typed once you let go.
-  - A click during the first 1.5 seconds of a hold cancels like a key does (right Command+click is a
-    shortcut, not a dictation).
+  - A hold with a click and no speech (right Command+click, right Option+drag) ends quietly; it used to
+    raise the "mic may be muted" alert. The click does not cancel the take, so you can still hold, click
+    into a field and speak.
   - Command mode's 75 second limit starts when its request starts, as in Prompt and Context.
   - A dropped filler hands back its question mark or exclamation mark; dictionary rules do not fire
     inside accented words; text cut for heavy turns never ends in half a character.
   - A language code whisper does not know in `config.local.sh` falls back to English; the server used to
     fail to start with it.
   - A key-up that beats the recorder's start stops that recorder (it could keep the microphone open).
+  - Ordinary words in a window title ("glm.hpp", "Minimax algorithm", "Grokking Algorithms", "Sonnet 18")
+    no longer pick a model's guidance. A title two tabs share in Cyrillic or Chinese still counts as 2 windows.
   - Smaller: `brain-map.txt` parsing, a dry run that read keys, uninstall leaving an empty cache folder,
     a config backup that could be overwritten, very large selections, notices that named the wrong reason.
 - Family rules the labs' current pages no longer support were corrected or removed (effort defaults and

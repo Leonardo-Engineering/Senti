@@ -585,6 +585,27 @@ for APPNAME in "Google Chrome" "Safari" "Arc" "Brave Browser" "Microsoft Edge" "
 done
 [ -z "$HIJACK" ] && ok "no browser/terminal app NAME hijacks a model family (13 probed)" \
                   || bad "KB match regex claims an app name:$HIJACK"
+# The same for window TITLES, which are full of ordinary words: a title names a family only by a
+# whole word that is rarely anything else (claude, chatgpt, codex) or by being one whole segment.
+THIJ=""
+while IFS= read -r TT; do
+  [ -n "$TT" ] || continue
+  RR="$(SENTI_SLABEL="$TT" bash "$CFG/senti-target.sh" "Safari" 2>/dev/null)"
+  case "$RR" in *"paste this prompt into"*) THIJ="$THIJ [$TT]" ;; esac
+done <<'TITLES'
+glm.hpp — engine
+Minimax algorithm - Wikipedia
+Grokking Algorithms.pdf
+vertex.glsl — shaders
+kimino — deploy
+Opus Dei - Wikipedia
+Sonnet 18 - Poetry Foundation
+haiku-generator — zsh
+Mistral wind - Wikipedia
+Llama farm visit
+Gemini (constellation) - Wikipedia
+TITLES
+[ -z "$THIJ" ] && ok "ordinary words in a window title do not name a model family (11 titles probed)" || bad "window titles mistaken for a model:$THIJ"
 # Models in one family are prompted differently, so an app resolves to the model it runs (the KB's
 # "app:" lines), and Codex to the model its own config names.
 tgt_for() { SENTI_SLABEL="${2:-}" bash "$CFG/senti-target.sh" "$1" 2>/dev/null; }

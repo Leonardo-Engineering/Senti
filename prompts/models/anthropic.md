@@ -2,6 +2,7 @@
 family: anthropic
 display_name: Anthropic Claude
 match: claude|anthropic|opus|sonnet|haiku
+title_word: claude
 frontier: claude-fable-5-2
 daily: claude-opus-5-5
 updated: 2026-11-15
