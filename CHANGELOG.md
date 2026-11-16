@@ -130,6 +130,13 @@ All notable changes to Senti. Dates are in US Eastern time.
     no longer pick a model's guidance. A title two tabs share in Cyrillic or Chinese still counts as 2 windows.
   - An empty answer from the model ("delete this" in Command mode) is no longer pasted as the literal
     `<r></r>` tags. Command mode reports an empty answer; Prompt mode hands back your words.
+  - A hung Parakeet process is cut off after 10 seconds (it was 30), so the whisper fallback still lands
+    inside the app's 75 second limit.
+  - The Speed choices and Restart engine refuse while Senti is recording or working; switching then lost
+    the words in flight.
+  - `uninstall.sh` turns Hammerspoon's Dock and menu bar icons back on and says how to stop it opening at
+    login.
+  - "codex-notes" or "claude.md" in a window title no longer picks that model's guidance.
   - Smaller: `brain-map.txt` parsing, a dry run that read keys, uninstall leaving an empty cache folder,
     a config backup that could be overwritten, very large selections, notices that named the wrong reason.
 - Family rules the labs' current pages no longer support were corrected or removed (effort defaults and

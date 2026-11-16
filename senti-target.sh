@@ -85,7 +85,7 @@ elif [ -n "$HINT" ] || [ -n "$TITLE" ]; then
       [ -f "$f" ] || continue
       fam="$(fm "$f" family)"; [ "$fam" = "universal" ] && continue
       tw="$(fm "$f" title_word)"; te="$(fm "$f" title_exact)"
-      if [ -n "$tw" ] && printf '%s' "$TITLE" | /usr/bin/grep -qiwE "$tw"; then CHOSEN="$f"; break; fi
+      if [ -n "$tw" ] && printf '%s' "$TITLE" | /usr/bin/grep -qiE "(^|[^[:alnum:]_.-])($tw)(\$|[^[:alnum:]_.-])"; then CHOSEN="$f"; break; fi
       if [ -n "$te" ] && printf '%s\n' "$SEGS" | /usr/bin/sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | /usr/bin/grep -qixE "$te"; then CHOSEN="$f"; break; fi
     done
   fi

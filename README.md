@@ -399,8 +399,8 @@ From your copy of the repository:
 ```
 
 It lists what it will remove and asks first. Every question defaults to No. Hammerspoon itself stays
-installed, still set to open at login with its own icons hidden; change that in Hammerspoon's
-preferences or remove Hammerspoon if you no longer use it. It:
+installed. The uninstaller turns its Dock and menu bar icons back on; it still opens at login until
+you untick that in Hammerspoon's preferences, or remove Hammerspoon if you no longer use it. It:
 
 - stops and removes the speech server's LaunchAgent;
 - puts back your previous `~/.hammerspoon/init.lua` from the newest `init.lua.pre-senti.*` backup

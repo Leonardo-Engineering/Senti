@@ -152,7 +152,7 @@ NH="$(norm "$HINT")"
 [ "${#NH}" -lt 3 ] && exit 0   # too short to match anything safely
 # Matching a project to a note name. It used to be "either contains the other" on the squeezed
 # name, first match in alphabetical order: project "senti" picked a folder called "Essentials",
-# and "davincibets_app" picked "App" (15 Nov 2026), so a heavy turn carried another project's
+# and "acme_app" picked "App" (15 Nov 2026), so a heavy turn carried another project's
 # note. Now: an exact match (MK=2) always wins; otherwise whole words only (MK=1), and a name
 # shorter than half the project's cannot claim it.
 wordform() { printf '%s' "$1" | /usr/bin/tr 'A-Z' 'a-z' | /usr/bin/tr -cs 'a-z0-9' ' '; }
