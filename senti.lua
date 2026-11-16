@@ -1139,7 +1139,14 @@ wf.TERMINALS = { ["com.apple.Terminal"] = true, ["com.googlecode.iterm2"] = true
 -- never read beyond its role.
 function wf.axCounts()
   local ok, res = pcall(function()
-    local el = hs.axuielement.systemWideElement():attributeValue("AXFocusedUIElement")
+    -- Without a limit a busy front app can hold this lookup, and Hammerspoon's main thread
+    -- with it, for the system default of several seconds before Cmd+V is even sent. A timeout
+    -- on the system-wide element applies to every Accessibility call in this process, so it
+    -- is set for this one lookup and put back (0 = the system default) straight after.
+    local sys = hs.axuielement.systemWideElement()
+    pcall(function() sys:setTimeout(0.5) end)
+    local el = sys:attributeValue("AXFocusedUIElement")
+    pcall(function() sys:setTimeout(0) end)
     if not el then return nil end
     pcall(function() el:setTimeout(0.25) end)
     local role, sub = el:attributeValue("AXRole"), el:attributeValue("AXSubrole")
@@ -1221,7 +1228,10 @@ function wf.deliver(text, opts)
   if not opts.again then rememberLast(text) end
   local function go(waited)
     local terminal = wf.TERMINALS[frontBundle() or ""] == true
+    local tAX = hs.timer.secondsSinceEpoch()
     local before = wf.axCounts()
+    local axMs = (hs.timer.secondsSinceEpoch() - tAX) * 1000
+    if axMs > 100 then wf.log(string.format("paste: the field took %d ms to answer before pasting", math.floor(axMs))) end
     wf.paste(text)
     local txn = { saved = saved, ours = hs.pasteboard.changeCount() }
     wf.txn = txn
@@ -2523,7 +2533,8 @@ local function menu()
     (function()
       if not wf.secureInput() then return { title = "Esc cancels a recording", disabled = true } end
       return { title = "Secure input is on: Esc cannot cancel here", fn = function()
-        wf.notify("An app has secure keyboard entry on (a password field, or Terminal's\nSecure Keyboard Entry). Holding a key still dictates, but Esc cannot cancel.", 7)
+        local who = wf.secureInputApp()
+        wf.notify((who and (who .. " has") or "An app has") .. " secure keyboard entry on (a password field, or\nTerminal's Secure Keyboard Entry). Holding a key still dictates, but Esc cannot cancel.", 7)
       end }
     end)(),
     (function()
@@ -2657,6 +2668,18 @@ end)
 function wf.secureInput()
   local ok, on = pcall(hs.eventtap.isSecureInputEnabled)
   return ok and on == true
+end
+
+-- Which app holds secure input: the window server publishes its pid in the IO registry.
+-- Asked only when the user clicks the menu line (one ioreg run), never on a hot path.
+function wf.secureInputApp()
+  local ok, name = pcall(function()
+    local out = hs.execute("/usr/sbin/ioreg -l -w 0 -d 4 | /usr/bin/grep -o 'kCGSSessionSecureInputPID\"=[0-9]*' | /usr/bin/head -1")
+    local pid = tonumber((out or ""):match("=(%d+)"))
+    local app = pid and hs.application.applicationForPID(pid)
+    return app and app:name() or nil
+  end)
+  return ok and name or nil
 end
 
 function wf.diag()

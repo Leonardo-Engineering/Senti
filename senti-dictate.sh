@@ -360,11 +360,15 @@ stop() {
   local tail_ms="${WF_TAIL_MS:-100}" sz
   case "$tail_ms" in ''|*[!0-9]*) tail_ms=0 ;; esac
   [ "$tail_ms" -gt 500 ] && tail_ms=500
-  if [ "$tail_ms" -gt 0 ] && is_recording; then
+  # Kept cheap: the pidfile test stands in for is_recording (a ps spawn; finish_recording
+  # checks the process itself right after), and printf is the builtin. Measured cost of the
+  # default 100 ms tail: about 135 ms per dictation, key-up to text (bench-dictate, 15 Nov 2026).
+  if [ "$tail_ms" -gt 0 ] && [ -s "$WF_PIDFILE" ]; then
     sz="$(/usr/bin/stat -f %z "$WF_AUDIO" 2>/dev/null || echo 0)"
     if [ "${sz:-0}" -ge 16044 ]; then                     # 44-byte header + 0.5 s of 16 kHz 16-bit mono
-      /bin/sleep "$(/usr/bin/printf '0.%03d' "$tail_ms")"
-      if ! is_recording; then log "stop: cancelled during the tail"; return 0; fi
+      local tsec; printf -v tsec '0.%03d' "$tail_ms"
+      /bin/sleep "$tsec"
+      if [ ! -s "$WF_PIDFILE" ]; then log "stop: cancelled during the tail"; return 0; fi
       log "stop: tail $tail_ms ms"
     fi
   fi
