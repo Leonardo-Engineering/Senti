@@ -1125,7 +1125,8 @@ function wf.titleHead(w)
   -- A title can change by itself during a turn: a spinner glyph in front (Claude Code in Ghostty or
   -- iTerm2), an unread count "(3) Inbox" or "Inbox (4)", an editor's unsaved dot. Compare without
   -- those, or a dictation into the SAME window is refused as "you switched windows".
-  head = head:gsub("%s*[%(%[]%d+[%)%]]", "")      -- a count anywhere: "(3) Inbox", "Inbox (4)", "Inbox (3) - me - Mail"
+  local raw = head
+  head = head:gsub("%s*[%(%[]%d%d?%d?[%)%]]", "")      -- a count anywhere: "(3) Inbox", "Inbox (4)", "Inbox (3) - me - Mail"
   -- Leading symbols only: ASCII punctuation and spaces, and the Unicode blocks U+2000 to U+28FF
   -- (general punctuation, arrows, shapes, dingbats, Braille spinner frames; UTF-8 lead byte E2 with
   -- a second byte 80 to A3). Letters in any script stay, so 2 tabs titled in Cyrillic or Chinese
@@ -1138,7 +1139,9 @@ function wf.titleHead(w)
     elseif head:match("^\240\159[\128-\191][\128-\191]") then head = head:sub(5)  -- an emoji (U+1F000 to U+1FFFF)
     else break end
   end
-  return (head:gsub("%s+$", ""))
+  head = head:gsub("%s+$", "")
+  if head == "" then return raw end              -- a title of only symbols or a count: compare it as it is
+  return head
 end
 -- Focus moved: another window, or the same window now showing another tab or document (its title
 -- head changed). Only the head is compared, because the rest of a terminal title animates.
@@ -1314,7 +1317,7 @@ function wf.deliver(text, opts)
   wf.modWaitSaved = saved
   -- A hold key pressed while the last turn was still working keeps a modifier down: wait longer
   -- for it (the user was just told to let go), so that result is still typed.
-  local limit = opts.modWait or ((wf.busyAt and hs.timer.secondsSinceEpoch() - wf.busyAt < 6) and 2.0 or 0.3)
+  local limit = opts.modWait or ((wf.busyTimer or (wf.busyAt and hs.timer.secondsSinceEpoch() - wf.busyAt < 6)) and 2.0 or 0.3)
   wf.modWait = hs.timer.doEvery(0.02, function()
     waited = waited + 0.02
     local clear = not modsHeld()

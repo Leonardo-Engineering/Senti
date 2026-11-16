@@ -343,7 +343,7 @@ clean_text() {
         my $tok = $w[$i]; my $base = lc $tok; my $p = "";
         $p = $1 if $base =~ /([.,!?;:]+)$/; $base =~ s/[.,!?;:]+$//;
         if ($en ? $base =~ /^(um+|uh+|uhm+|erm+|hmm+)$/ : $base =~ /^(uh+|uhm+|erm+|hmm+)$/) {
-          if ($p =~ /([.?!])$/ && $out ne "" && $out !~ /[.!?]$/) { my $e = $1; $out =~ s/[,;:]+$//; $out .= $e; }
+          if ($p =~ /^[,;:]*([.?!])[.?!]*$/ && $out ne "" && $out !~ /[.!?]$/) { my $e = $1; $out =~ s/[,;:]+$//; $out .= $e; }
           next;
         }
         next if $en && $i == 0 && $n > 2 && $p eq "," && $base =~ /^(so|okay|ok|well|like)$/;
@@ -363,7 +363,9 @@ clean_text() {
       # exclamation mark is not a letter, so a rule still fires next to those.
       my $dec = utf8::decode($t);
       for my $ru (@rules) { my ($p, $r) = @$ru; if ($dec) { utf8::decode($p); utf8::decode($r); }
-        $t =~ s/(?<![\p{L}\p{N}-])\Q$p\E(?![\p{L}\p{N}-])/$r/gi; }
+        # Chinese, Japanese and Thai are written without spaces, so a letter of those scripts beside
+        # the match does not make it part of a word ("我用jason格式" still becomes JSON).
+        $t =~ s/(?<![\p{N}-])(?<![^\P{L}\p{Han}\p{Hiragana}\p{Katakana}\p{Thai}])\Q$p\E(?![\p{N}-])(?![^\P{L}\p{Han}\p{Hiragana}\p{Katakana}\p{Thai}])/$r/gi; }
       utf8::encode($t) if $dec;
     }
     print $t;' "$WF_REPLACEMENTS"

@@ -53,7 +53,7 @@ RESULT="$(printf '%s' "$OUT" | extract_r | trim)"
 if blank "$RESULT"; then
   case "$OUT" in
     *"<r>"*"</r>"*) : ;;                                              # a closed, empty pair: not pasted as literal tags
-    *"<r>"*) RESULT="$(printf '%s' "${OUT#*<r>}" | trim)" ;;         # the closing tag was cut off
+    "<r>"*) RESULT="$(printf '%s' "${OUT#<r>}" | trim)" ;;           # it starts with the tag and the closing one was cut off
     *) RESULT="$(printf '%s' "$OUT" | trim)" ;;
   esac
 fi

@@ -62,7 +62,8 @@ RESULT="$(printf '%s' "$OUT" | /usr/bin/perl -0777 -ne 'my @o = /<r>/g; if (@o =
 if blank "$RESULT"; then
   case "$OUT" in
     *"<r>"*"</r>"*) : ;;                          # a closed, empty pair: an empty answer
-    *"<r>"*) RESULT="${OUT#*<r>}" ;;              # the closing tag was cut off: keep what came after the opening one
+    "<r>"*) RESULT="${OUT#<r>}" ;;                # it starts with the tag and the closing one was cut off
+    *"<r>"*) RESULT="$OUT" ;;                     # an untagged answer that only mentions the tag
     *) RESULT="$OUT" ;;                           # no tags at all
   esac
 fi

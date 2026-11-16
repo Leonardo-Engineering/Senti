@@ -139,7 +139,8 @@ All notable changes to Senti. Dates are in US Eastern time.
   - "codex-notes" or "claude.md" in a window title no longer picks that model's guidance.
   - A language code whisper does not know ("eng", "zz") in `config.local.sh` falls back to English; the
     first fix only checked its shape.
-  - Dictionary rules fire next to curly quotes, an ellipsis and an inverted exclamation mark again.
+  - Dictionary rules fire next to curly quotes, an ellipsis and an inverted exclamation mark again, and inside
+    Chinese, Japanese and Thai text, which has no spaces.
   - A long silent hold still raises the microphone alert even if you clicked; only a hold under 3
     seconds with a click ends quietly.
   - The Language menu refuses while Senti is recording or working, like the Speed choices.
