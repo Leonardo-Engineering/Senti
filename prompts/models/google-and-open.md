@@ -1,7 +1,8 @@
 ---
 family: google-open
 display_name: Google Gemini and other labs' models
-match: gemini|vertex|aistudio|ai studio|notebooklm|llama|mistral|le chat|qwen|tongyi|deepseek|gemma|ollama|lm studio|grok|kimi|moonshot|glm|zhipu|chatglm|minimax
+match: gemini|vertex ai|aistudio|ai studio|notebooklm|llama|mistral|le chat|qwen|tongyi|deepseek|gemma|ollama|lm studio|grok|kimi|moonshot|glm|zhipu|chatglm|minimax
+title_exact: gemini|google gemini|google ai studio|notebooklm|grok|kimi|le chat|mistral|qwen|deepseek|chatglm|minimax agent
 frontier: gemini-4-carbon
 daily: gemini-4-hydrogen
 updated: 2026-11-15

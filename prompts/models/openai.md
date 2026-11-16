@@ -2,6 +2,7 @@
 family: openai
 display_name: OpenAI GPT-6
 match: gpt-6|gpt6|gpt-5|gpt5|chatgpt|openai|codex|o3|o4
+title_word: chatgpt|codex
 frontier: gpt-6-astra
 daily: gpt-6-sol
 updated: 2026-11-15
@@ -184,8 +185,6 @@ so these are only the points OpenAI states for Luna. When the prompt is going he
   unspecified instead of guessing.
 - **Keep the task tight.** OpenAI pairs Luna with fine-grained edits, well-scoped problems and
   simple extraction, so split broad work into focused asks.
-- **Give concrete guidance when the method matters.** OpenAI notes that guidance which helps
-  Sol or Luna may overconstrain Astra, so detail that hurts Astra can help here.
 - **Ask for a length only when it matters.** OpenAI says Sol and Luna now give slightly
   shorter answers without losing substance.
 
@@ -193,7 +192,7 @@ so these are only the points OpenAI states for Luna. When the prompt is going he
 
 A fast, efficient GPT-6.1 model for writing, visual reasoning and computer use (OpenAI model
 page, model selection guide and launch post, read 15 Nov 2026). Effort runs from `none` to
-`max`, default `medium`, and OpenAI says to start at `medium`. When the prompt is going here:
+`max`, default `medium`. When the prompt is going here:
 
 - **Supply the source material.** OpenAI recommends Terra for concise writing based on
   supplied material, so paste the notes, draft or document it should work from.
@@ -222,9 +221,6 @@ to `max`, default `medium`; there is no `none`. When the prompt is going here:
   prompts to define what counts as done and how the model should verify its work.
 - **Say which actions it may take without asking.** OpenAI's GPT-6 autonomy wording was written
   from Astra's behavior, so keep it to 1 or 2 lines and test it here.
-- **Give concrete guidance when the method matters.** OpenAI notes that guidance which helps Sol
-  or Luna may overconstrain Astra.
-
 ## Model: gpt-6-astra
 
 OpenAI's most capable model (OpenAI GPT-6 guide and Codex blog, read 15 Nov 2026). Effort runs

@@ -978,10 +978,14 @@ local SHORTCUT_WINDOW = 1.5
 local ET = hs.eventtap.event.types
 wf.escTap = hs.eventtap.new({ ET.keyDown, ET.leftMouseDown, ET.rightMouseDown, ET.otherMouseDown }, function(e)
   local ok, acted = pcall(function()
-    -- a click counts like a key: right Command+click (open in a new tab) or right Option+drag is a
-    -- shortcut, not a dictation, and used to end in "Nothing was transcribed"
     local isKey = (e.getType == nil) or e:getType() == ET.keyDown
-    if not isKey or e:getKeyCode() ~= ESC then
+    if not isKey then
+      -- a click while holding: it may be right Command+click (a shortcut) or the user placing the
+      -- cursor before speaking, so the take goes on. If it ends silent, say nothing (see handleTranscript).
+      if wf.state == "recording" and wf.held ~= nil then wf.clickInHold = true end
+      return false
+    end
+    if e:getKeyCode() ~= ESC then
       if wf.state == "recording" and wf.held ~= nil and wf.heldAt
          and hs.timer.secondsSinceEpoch() - wf.heldAt < SHORTCUT_WINDOW then
         wf.cancelTurn(true)
@@ -1120,8 +1124,18 @@ function wf.titleHead(w)
   -- A title can change by itself during a turn: a spinner glyph in front (Claude Code in Ghostty or
   -- iTerm2), an unread count "(3) Inbox" or "Inbox (4)", an editor's unsaved dot. Compare without
   -- those, or a dictation into the SAME window is refused as "you switched windows".
-  head = head:gsub("^%(%d+%)%s*", ""):gsub("%s*[%(%[]%d+[%)%]]%s*$", ""):gsub("^[^%w]+", ""):gsub("%s+$", "")
-  return head
+  head = head:gsub("^%(%d+%)%s*", ""):gsub("%s*[%(%[]%d+[%)%]]%s*$", "")
+  -- Leading symbols only: ASCII punctuation and spaces, and the Unicode blocks U+2000 to U+28FF
+  -- (general punctuation, arrows, shapes, dingbats, Braille spinner frames; UTF-8 lead byte E2 with
+  -- a second byte 80 to A3). Letters in any script stay, so 2 tabs titled in Cyrillic or Chinese
+  -- still compare as different.
+  while true do
+    local a = head:match("^[%s%p]+")
+    if a then head = head:sub(#a + 1)
+    elseif head:match("^\226[\128-\163][\128-\191]") then head = head:sub(4)
+    else break end
+  end
+  return (head:gsub("%s+$", ""))
 end
 -- Focus moved: another window, or the same window now showing another tab or document (its title
 -- head changed). Only the head is compared, because the rest of a terminal title animates.
@@ -1487,6 +1501,7 @@ function wf.commandWith(command, turn, prevClip, sel, copied)
   wf.cmdCopyCount = copied and hs.pasteboard.changeCount() or nil   -- the clipboard as our Cmd+C left it
   if copied and wf.pending and wf.pending.turn == turn then wf.pending.clipCount = wf.cmdCopyCount end
   wf.aiStarting()                               -- the 75 s clock starts at the request, as in Prompt and Context
+  wf.hud.show("thinking")                       -- setState redraws the pill as working; put the thinking look back
   do
     local f = io.open(wf.SELFILE, "w"); if f then f:write(sel); f:close() end
     wf.log("command: " .. #command .. " chars on " .. #sel .. " selected chars")  -- not the text itself
@@ -2133,6 +2148,13 @@ function wf.handleTranscript(raw, turn, clipOnly)
       wf.setState("idle"); wf.sweepCache()
       return
     end
+    -- A silent take in which the user clicked: right Command+click or right Option+drag, a shortcut
+    -- that used to end in the "mic may be muted" alert and its error sound.
+    if wf.clickInHold then
+      wf.log("transcript: empty after a hold with a click — ignored")
+      wf.setState("idle"); wf.sweepCache()
+      return
+    end
     wf.log("transcript: empty (silence/gated) — alerting user")
     wf.setState("idle"); wf.sweepCache()
     pcall(function() hs.sound.getByName("Basso"):play() end)
@@ -2243,6 +2265,7 @@ function wf.record()
   if wf.recorderStarted then wf.recorderStarted = nil                 -- earlyStart already did it
   else wf.keyDownAt = wf.recStartedAt; hs.task.new(wf.BASH, nil, {wf.DICTATE, "start"}):start() end
   wf.firstAudioLogged = nil
+  wf.clickInHold = nil
   wf.watchHold()
 end
 
