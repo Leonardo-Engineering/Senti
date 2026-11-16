@@ -1,0 +1,8 @@
+# Senti snippets: say a phrase on its own and Senti types the text.
+# Format:  what you say | what to type        (\n is a line break)
+# Only a whole dictation that is exactly the phrase expands. Inside a sentence it is left alone.
+# Lines starting with # are ignored. This file stays on your Mac and is never sent anywhere.
+#
+# Examples (remove the # to use them):
+# my email | you@example.com
+# sign off | Thanks,\nYour name

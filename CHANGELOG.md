@@ -6,7 +6,11 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Added
 
-- Language switch in the menu bar: 15 languages and automatic detection (about 0.7 s slower). The language
+- Snippets: say a phrase on its own and Senti types the text you set for it (`~/.config/senti/snippets.txt`,
+  menu: Edit snippets). Only a whole dictation that is exactly the phrase expands. The file stays on your Mac.
+- Optional: mute other audio while recording (menu). Sound comes back when the recording ends, and at the
+  next launch if Senti was closed mid-recording. Off by default.
+- Language switch in the menu bar: 15 languages and automatic detection (0.3 to 0.8 s slower). The language
   is sent with each request, so switching does not reload the model. The English-only Fast model is not
   used for other languages, and English filler removal applies to English only.
 - Paste check: after pasting, Senti checks through Accessibility that the text arrived (two numbers, never

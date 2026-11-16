@@ -1094,6 +1094,10 @@ O3="$(say_as auto 'Bom, um dia.')";          A3="$(/usr/bin/grep -c '^language=a
 case "$O1|$O3" in "Um, quiero um café."*"|Bom, um dia."*) ok "outside English, 'um' is kept as a word and only uh/erm/hmm are dropped" ;; *) bad "non-English cleanup gave '$O1' and '$O3'" ;; esac
 /bin/rm -f "$LP" "$FSOX2" "$FCURL" "$CARGS" "$HOME/.cache/senti/capture.wav"
 if [ "$CI" = 1 ]; then
+  [ -f "$SRC/snippets.txt" ] && ! /usr/bin/grep -v '^#' "$SRC/snippets.txt" | /usr/bin/grep -q '|' && /usr/bin/grep -q '\[ -f "\$CFG/snippets.txt" \]' "$SRC/install.sh" \
+    && ok "snippets.txt ships with examples only (no live rule) and installs only if missing" || bad "snippets.txt ships a live rule, or install.sh would overwrite the user's file"
+  /usr/bin/grep -q 'wf.unmute()   -- a mute left behind' "$SRC/senti.lua" && /usr/bin/grep -q 'if s == "recording" then wf.muteSoon() else wf.unmute() end' "$SRC/senti.lua" \
+    && ok "a mute made while recording is undone on every other state and at launch" || bad "senti.lua can leave the sound muted"
   /usr/bin/grep -q 'function wf.langMenu' "$SRC/senti.lua" && /usr/bin/grep -q '"lang", code' "$SRC/senti.lua" && ok "the menu has a language switch that goes through senti-model.sh" || bad "senti.lua has no language menu"
 fi
 echo "── no lost words ──"
