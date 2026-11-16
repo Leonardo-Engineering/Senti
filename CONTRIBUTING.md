@@ -57,6 +57,29 @@ User settings live in `config.local.sh`, which nothing overwrites. If you change
 - **Paths may contain spaces.** Quote every path. Never hard-code a home folder; use `$HOME`, or
   `__HOME__` in the plist.
 
+## Keeping the model knowledge current
+
+Senti writes a prompt for the model you paste into, so it has to know how each model wants to be
+prompted. That knowledge is plain text in `prompts/models/`, and the list of models Senti can call is
+`ai-models.json`. Both go stale when a lab ships a model.
+
+- **The watch.** `python3 tools/models-watch.py` compares the two with OpenRouter's public model list
+  (no key). It reports listed models that are gone or whose price changed, newer models from the labs
+  Senti lists, listed models with no `## Model: <id>` section, and knowledge files older than 45 days.
+  A GitHub Action runs it every Monday and opens (or updates) one issue when there is something to do.
+  It never edits anything.
+- **Updating.** For each model in the issue: read the lab's own prompting guide and model page (not a
+  blog post), then add or rewrite that model's `## Model: <id>` section: at most 7 bullets, each one
+  thing a prompt writer should do differently for that model, with the source URL and the date under
+  `## Sources`. Models in one family differ (default effort, how literally they follow instructions,
+  how long they answer), so write what that model's page says, not what its family is known for. Set
+  `updated:` in the file's front matter. Keep the `## Inject` digest under about 900 characters: it is
+  the only family text sent with every prompt.
+- **Prices and new models.** Change `ai-models.json` (and its `checked` date), then the tables in
+  `README.md`. Prices for `openai` and `anthropic` rows come from the lab's own pricing page.
+- **Prove it.** Run the offline self-test, and for any change to prompting text run
+  `bash ~/.config/senti/senti-eval.sh ab base <variant>` and compare with its base-against-base row.
+
 ## Keep keys and personal details out
 
 - Never paste an API key into an issue, a pull request, a commit or a log excerpt. If output shows

@@ -1036,7 +1036,8 @@ for _try in 1 2 3; do
   for _i in $(/usr/bin/seq 1 100); do PSNOW="$(/bin/ps -Ao command=)"; case "$PSNOW" in *"sleep 0.500"*) break ;; esac; /bin/sleep 0.02; done
   WF_SOX="$FSOX" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" cancel >/dev/null 2>&1; wait
   CSTOP="$(/bin/cat "$HOME/.cache/senti/stop.out" 2>/dev/null)"; /bin/rm -f "$HOME/.cache/senti/stop.out"
-  LEFT="$(/bin/ps -Ao command= | /usr/bin/grep -c "[f]akesox -d" || true)"
+  # this run's own stand-in only (its full path): another sandbox on the machine may be running one too
+  LEFT=0; PSL="$(/bin/ps -Ao command=)"; case "$PSL" in *"$FSOX -d "*) LEFT=1 ;; esac
   NC1="$(/usr/bin/grep -c 'stop: cancelled during the tail' "$WF_LOG" 2>/dev/null || true)"
   [ "$NC1" -gt "$NC0" ] && { CTAIL=1; break; }
 done
@@ -1128,6 +1129,10 @@ if [ "$CI" = 1 ]; then
     && ok "snippets.txt ships with examples only (no live rule) and installs only if missing" || bad "snippets.txt ships a live rule, or install.sh would overwrite the user's file"
   /usr/bin/grep -q 'wf.unmute()   -- a mute left behind' "$SRC/senti.lua" && /usr/bin/grep -q 'if s == "recording" then wf.muteSoon() else wf.unmute() end' "$SRC/senti.lua" \
     && ok "a mute made while recording is undone on every other state and at launch" || bad "senti.lua can leave the sound muted"
+  WATCHF="$HOME/.cache/senti/watch-fixture.json"
+  printf '{"data":[{"id":"openai/gpt-6-luna","created":1,"name":"x","pricing":{"prompt":"0.0000001","completion":"0.0000009"}},{"id":"openai/gpt-7","created":4102444800,"name":"new","pricing":{"prompt":"0","completion":"0"}}]}' > "$WATCHF"
+  WATCH="$(/usr/bin/python3 "$SRC/tools/models-watch.py" --offline "$WATCHF" 2>&1)"; /bin/rm -f "$WATCHF"
+  case "$WATCH" in *"List prices that changed"*"gpt-6-luna"*"New models"*"openai/gpt-7"*"CHANGES: "*) ok "the models watch reports a changed price, a missing model and a newer one from a fixture list" ;; *) bad "models watch output: $(printf '%s' "$WATCH" | /usr/bin/tail -3)" ;; esac
   /usr/bin/grep -q 'function wf.langMenu' "$SRC/senti.lua" && /usr/bin/grep -q '"lang", code' "$SRC/senti.lua" && ok "the menu has a language switch that goes through senti-model.sh" || bad "senti.lua has no language menu"
 fi
 echo "── no lost words ──"
