@@ -169,6 +169,13 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
   earlier). `WF_TAIL_MS` (100) keeps recording after key-up; bench-dictate, key-up to text: tail 0 equals
   the pre-Phase-2 code within 10 ms (s02 489 ms both), the default 100 ms tail adds about 135 ms
   to every dictation (s02 624 ms). That is the price of not cutting a last word; `WF_TAIL_MS=0` removes it. No pre-roll: an always-on microphone was ruled out.
+- **Audit of 15 Nov 2026 (21 confirmed defects, fixed in PR 53):** reports and reproductions in
+  `.claude/tmp/team/audit3-*-report.md` and `scratch/audit3-*/`. Rules that came out of it: `wf.titleHead`
+  strips spinner glyphs and unread counts before the focus comparison; `wf.runCommand` hands back when focus
+  moved BEFORE it reads a selection; a pinned model drives both kinds even with the provider pinned; text cut
+  by bytes must drop a split UTF-8 character; `stop` waits up to 0.5 s for `start`'s pidfile. Known and left:
+  a hold key pressed while working is not queued (it is announced, and the finished result waits 2 s for the
+  key to come up).
 - **Paste (Phase 2):** everything pastes through `wf.deliver` (see the header comment there). First real
   use: `paste: verified after 54 to 57 ms`, 3 of 3, in a non-terminal app. The "field did not change"
   verdict is log-only (`wf.PASTE_WARN`) until it has been seen to be right on real fields.

@@ -53,7 +53,8 @@ case "$CMD" in
     blank "$TEXT" && exit 0
     # One line per turn: time, mode, the utterance flattened + clipped, and the epoch second
     # (recall ignores turns older than the TTL even in a file that new turns keep fresh).
-    FLAT="$(printf '%s' "$TEXT" | /usr/bin/tr '\n\t' '  ' | cut -c1-200)"
+    # 200 bytes, then drop a UTF-8 character the cut split in half (cut works in bytes here)
+    FLAT="$(printf '%s' "$TEXT" | /usr/bin/tr '\n\t' '  ' | /usr/bin/perl -e 'local $/; my $d = substr(<STDIN> // "", 0, 200); $d =~ s/([\xC0-\xFF][\x80-\xBF]*)\z/my $s = $1; my $n = ord($s) >= 0xF0 ? 4 : ord($s) >= 0xE0 ? 3 : 2; length($s) == $n ? $s : ""/e; print $d')"
     printf '%s\t%s\t%s\t%s\t%s\n' "$(date '+%H:%M')" "${MODE:-dictate}" "$FLAT" "$(date '+%s')" "$(pkey "$LABEL")" >> "$FILE"
     chmod 600 "$FILE" 2>/dev/null
     # Trim in place to the last N turns.

@@ -248,4 +248,10 @@ WF_TAIL_MS="${WF_TAIL_MS:-100}"
 
 # Second read of your settings (see the top of this file).
 [ -f "$HOME/.config/senti/config.local.sh" ] && . "$HOME/.config/senti/config.local.sh"
+# The language is checked again: this second read put back whatever the file says, and a value
+# whisper does not know ("pt-BR", "english") makes the speech server exit at start, forever.
+case "${WF_LANG:-en}" in
+  auto|[a-z][a-z]|[a-z][a-z][a-z]) ;;
+  *) WF_LANG="en" ;;
+esac
 true

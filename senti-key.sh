@@ -172,6 +172,7 @@ senti_key_read() {
 _sk_present() {
   local f; f="$(senti_key_file "$1")"
   [ -s "$f" ] && return 0
+  [ "${SENTI_AI_DRYRUN:-0}" = "1" ] && return 1      # a dry run never touches the Keychain
   senti_key_read "$1" && [ "$SENTI_KEY_SOURCE" = "keychain" ]
 }
 
@@ -215,7 +216,9 @@ senti_ai_resolve() {
   # model: before 15 Nov 2026 it fell through to the menu or auto tier, so a config that pinned
   # Claude for text still sent screenshots to another provider. (Every model in ai-models.json
   # reads images; one that does not answers with exit 18 and a notice, never a silent reroute.)
-  if [ -z "$cp$cm" ]; then
+  # This holds with the provider pinned too: WF_AI_PROVIDER=anthropic plus WF_TEXT_MODEL=claude-haiku-5-5
+  # used to send every screenshot request to the provider's DEFAULT model (found 15 Nov 2026).
+  if [ -z "$cm" ]; then
     local om
     if [ "$kind" = vision ]; then om="${WF_TEXT_MODEL:-}"; else om="${WF_VISION_MODEL:-}"; fi
     senti_id_ok "$om" && cm="$om"

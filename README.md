@@ -81,8 +81,8 @@ brief.
 A small pill at the bottom of the screen shows your live microphone level while you speak, then
 disappears. Things worth knowing:
 
-- **Cancelling.** Press Esc while the pill is showing. A key pressed in the first 1.5 seconds of a hold
-  also cancels quietly, so right ⌘+C or Fn+arrow still work as shortcuts. Esc cannot cancel while an app
+- **Cancelling.** Press Esc while the pill is showing. A key or a click in the first 1.5 seconds of a hold
+  also cancels quietly, so right ⌘+C, right ⌘+click or Fn+arrow still work as shortcuts. Esc cannot cancel while an app
   has secure keyboard entry on (a password field, or Terminal's Secure Keyboard Entry); the menu says
   when that is the case.
 - **Toggles.** `⌃⌥D`, `⌃⌥P` and `⌃⌥C` start a recording, and the same shortcut stops it.
