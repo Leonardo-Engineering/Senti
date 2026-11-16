@@ -3,6 +3,7 @@ family: openai
 display_name: OpenAI GPT-6
 match: gpt-6|gpt6|gpt-5|gpt5|chatgpt|openai|codex|o3|o4
 title_word: chatgpt|codex
+title_exact: chatgpt\.com
 frontier: gpt-6-astra
 daily: gpt-6-sol
 updated: 2026-11-15

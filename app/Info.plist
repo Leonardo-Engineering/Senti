@@ -5,8 +5,8 @@
     <key>CFBundleName</key>            <string>Senti</string>
     <key>CFBundleDisplayName</key>     <string>Senti</string>
     <key>CFBundleIdentifier</key>      <string>io.senti.server.launcher</string>
-    <key>CFBundleVersion</key>         <string>1.0</string>
-    <key>CFBundleShortVersionString</key><string>1.0</string>
+    <key>CFBundleVersion</key>         <string>1.1.0</string>
+    <key>CFBundleShortVersionString</key><string>1.1.0</string>
     <key>CFBundlePackageType</key>     <string>APPL</string>
     <key>CFBundleExecutable</key>      <string>senti</string>
     <key>CFBundleIconFile</key>        <string>appicon</string>

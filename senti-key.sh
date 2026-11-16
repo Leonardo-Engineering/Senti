@@ -221,7 +221,9 @@ senti_ai_resolve() {
   if [ -z "$cm" ]; then
     local om
     if [ "$kind" = vision ]; then om="${WF_TEXT_MODEL:-}"; else om="${WF_VISION_MODEL:-}"; fi
-    senti_id_ok "$om" && cm="$om"
+    # ...but only a model that belongs to the pinned provider: borrowing "openai/gpt-6-luna" (an
+    # OpenRouter id) for a pinned openai sent it to api.openai.com, which does not offer it.
+    if senti_id_ok "$om" && { [ -z "$cp" ] || [ "$(senti_infer_provider "$om")" = "$cp" ]; }; then cm="$om"; fi
   fi
   if [ -n "$ep$em" ]; then
     p="$ep"; m="$em"; src="env"

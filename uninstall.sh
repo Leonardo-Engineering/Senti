@@ -46,6 +46,12 @@ PLIST="$HOME/Library/LaunchAgents/io.senti.server.plist"
 HSDIR="$HOME/.hammerspoon"
 MODELS="$HOME/.local/share/whisper-models"
 LAUNCHCTL="${SENTI_LAUNCHCTL:-launchctl}"   # tests point this at a logging stub
+# `defaults` talks to cfprefsd and IGNORES $HOME: under a throwaway HOME it still writes the real
+# user's preferences (the self-test did exactly that for a few runs on 15 Nov 2026). So tests must
+# pass a stub, and a run that stubs launchctl without stubbing defaults does not touch them at all.
+if [ -n "${SENTI_DEFAULTS:-}" ]; then DEFAULTS="$SENTI_DEFAULTS"
+elif [ -n "${SENTI_LAUNCHCTL:-}" ]; then DEFAULTS=""
+else DEFAULTS="/usr/bin/defaults"; fi
 
 ask() {   # ask "question" → 0 for yes. Default No. Reads one line of input.
   local reply
@@ -147,11 +153,12 @@ rm -f "$HOME/Library/Logs/senti.log" "$HOME/Library/Logs/senti-server.log"
 echo "✓ removed Senti.app, ~/.cache/senti and the logs"
 
 # 3b. Senti told Hammerspoon to hide its Dock and menu bar icons and to open at login. Put the
-# icons back (a read-back proves it). The login item is Hammerspoon's own setting: say where it is.
-if /usr/bin/defaults read org.hammerspoon.Hammerspoon MJShowMenuIconKey >/dev/null 2>&1; then
-  /usr/bin/defaults write org.hammerspoon.Hammerspoon MJShowDockIconKey -bool true
-  /usr/bin/defaults write org.hammerspoon.Hammerspoon MJShowMenuIconKey -bool true
-  if [ "$(/usr/bin/defaults read org.hammerspoon.Hammerspoon MJShowMenuIconKey 2>/dev/null)" = 1 ]; then
+# icons back (a read-back proves it), but only when the config in place was Senti's: with someone
+# else's init.lua the icon settings are theirs. The login item is Hammerspoon's own setting: say where it is.
+if [ "${IS_SENTI:-0}" = 1 ] && [ -n "$DEFAULTS" ] && "$DEFAULTS" read org.hammerspoon.Hammerspoon MJShowMenuIconKey >/dev/null 2>&1; then
+  "$DEFAULTS" write org.hammerspoon.Hammerspoon MJShowDockIconKey -bool true
+  "$DEFAULTS" write org.hammerspoon.Hammerspoon MJShowMenuIconKey -bool true
+  if [ "$("$DEFAULTS" read org.hammerspoon.Hammerspoon MJShowMenuIconKey 2>/dev/null)" = 1 ]; then
     echo "✓ Hammerspoon's Dock and menu bar icons are back on (they show after it restarts)"
   fi
 fi

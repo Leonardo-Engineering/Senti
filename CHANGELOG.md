@@ -2,7 +2,7 @@
 
 All notable changes to Senti. Dates are in US Eastern time.
 
-## [Unreleased] 1.1
+## [1.1.0] 2026-11-15
 
 ### Added
 
@@ -85,8 +85,8 @@ All notable changes to Senti. Dates are in US Eastern time.
 - Faster dictation path: key-down to recorder start went from 0.127 s to 0.018 s, and the short-clip
   speedup now applies up to 14 s instead of 10 s, which took an 11.7 s clip from 1.04 s to 0.59 s
   (recorded clips on an M3 Pro, 13 Nov 2026).
-- `config.sh` schema v9 (then v10, above). Upgrading saves your old file as `config.sh.v<old>.bak`
-  and installs the new one; copy your personal settings back from that file.
+- `config.sh` schema v9 (then v10, above). An update keeps the old file as `config.sh.v<old>.bak`
+  and moves the settings you had added into `config.local.sh`.
 - The notes digest is no longer sent in the background to be shortened. That step is deleted, and the
   log says what each request sent.
 - System prompts moved off the command line in every wrapper, and wrappers keep the cause of an AI
@@ -137,6 +137,19 @@ All notable changes to Senti. Dates are in US Eastern time.
   - `uninstall.sh` turns Hammerspoon's Dock and menu bar icons back on and says how to stop it opening at
     login.
   - "codex-notes" or "claude.md" in a window title no longer picks that model's guidance.
+  - A language code whisper does not know ("eng", "zz") in `config.local.sh` falls back to English; the
+    first fix only checked its shape.
+  - Dictionary rules fire next to curly quotes, an ellipsis and an inverted exclamation mark again, and inside
+    Chinese, Japanese and Thai text, which has no spaces.
+  - A long silent hold still raises the microphone alert even if you clicked; only a hold under 3
+    seconds with a click ends quietly.
+  - The Language menu refuses while Senti is recording or working, like the Speed choices.
+  - The "still writing the last one" notice needs the hold key down alone for 0.4 seconds, so an accent
+    typed with right Option or a right Command shortcut does not raise it.
+  - An unread count anywhere in a window title is ignored by the focus check.
+  - An answer whose closing tag was cut off is kept. A pinned provider no longer borrows another
+    provider's model id. A filler before a comma no longer turns the sentence into a question.
+  - The self-test no longer reaches the real Hammerspoon preferences through `uninstall.sh`.
   - Smaller: `brain-map.txt` parsing, a dry run that read keys, uninstall leaving an empty cache folder,
     a config backup that could be overwritten, very large selections, notices that named the wrong reason.
 - Family rules the labs' current pages no longer support were corrected or removed (effort defaults and
@@ -165,11 +178,11 @@ All notable changes to Senti. Dates are in US Eastern time.
 - Picking a model now changes Prompt mode with a screenshot too. The larger OpenAI models were not marked
   as reading images, so the screenshot path stayed on the default model whatever the menu said. A model
   pinned in the config is used for text and screenshots alike.
-- Senti now says when another dictation tool is running on the same keys (Wispr Flow uses Fn and right
-  Command by default), at launch and in the menu. If the text Fn copies is just what you said, pasted by
+- Senti now says when another dictation tool is running on the same keys (Wispr Flow's default dictation key is also Fn), at launch and in the menu. If the text Fn copies is just what you said, pasted by
   that tool, it is no longer treated as a selection to edit.
 - Updating no longer wipes your settings. They live in `config.local.sh`, which `install.sh` never
-  overwrites; the first update moves the settings you had added to `config.sh` there for you.
+  overwrites; the first update carries over the settings you had added. A changed default or a model pin is
+  listed there as a comment for you to review, not applied.
 - A project now picks its own note: exact name first, then whole words. A project called "senti" could
   pick a note called "Essentials" before.
 - Session memory is kept per project, so another tab or project in the same window no longer shows up

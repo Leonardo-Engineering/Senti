@@ -23,8 +23,7 @@ case "${1:-current}" in
   lang)
     case "${2:-current}" in
       current) echo "$WF_LANG"; exit 0 ;;
-      auto|[a-z][a-z]|[a-z][a-z][a-z]) ;;
-      *) echo "usage: senti-model.sh lang <two or three letter code|auto|current>" >&2; exit 1 ;;
+      *) wf_lang_ok "$2" || { echo "usage: senti-model.sh lang <a whisper language code|auto|current>" >&2; exit 1; } ;;
     esac
     before="$WF_MODEL"
     ( umask 077; echo "$2" > "$WF_LANG_PREF" )
