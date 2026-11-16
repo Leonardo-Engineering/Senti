@@ -132,7 +132,7 @@ Put your own settings in `~/.config/senti/config.local.sh`: `install.sh` never o
 `config.sh` holds the defaults and is replaced on every update (the previous one is kept as
 `config.sh.v<N>.bak`). The first update from an older install moves the settings you had added to
 `config.sh` into `config.local.sh` for you, and lists any line it was unsure about there as a comment.
-Your `replacements.txt`, `brain-map.txt` and eval cases are kept.
+Your `replacements.txt`, `snippets.txt`, `brain-map.txt` and eval cases are kept.
 
 The [Releases page](https://github.com/Leonardo-Engineering/Senti/releases/latest) has the same
 source. Release 1.0.0 has no attached files. When a release does attach a `SHA256SUMS` file, check
@@ -151,7 +151,7 @@ shasum -a 256 -c SHA256SUMS
   screen recording*, then relaunch Hammerspoon.
 
 **Language.** English by default. Pick another language, or automatic detection, in the menu bar
-(Language). Detection adds about 0.7 seconds to each dictation. Any other Whisper language code works
+(Language). Detection adds 0.3 to 0.8 seconds to each dictation. Any other Whisper language code works
 as `WF_LANG` in `~/.config/senti/config.local.sh`. The opening phrases that ask for more context in
 Prompt mode ("think hard", "today let's work on") are English only.
 
@@ -397,6 +397,10 @@ from it but have no line there until you add one: the silence threshold (`WF_SIL
 0.005) and the operating layer (`WF_OPERATING_LAYER=0` turns it off). Edit
 `replacements.txt` for vocabulary fixes (for example "cloud md" to `CLAUDE.md`) and
 `eval/cases.txt` for eval cases.
+
+`snippets.txt` holds phrases that type a fixed text when you say them on their own, one per line as
+`what you say | what to type` (`\n` is a line break). Say "my email" alone and Senti types the address;
+say it inside a sentence and nothing changes. The file is read on your Mac and never sent anywhere.
 
 `bash ~/.config/senti/senti-selftest.sh` checks the whole install: the speech engine, a transcription
 round trip, the config version, keys (presence only), the icon build, session isolation and the

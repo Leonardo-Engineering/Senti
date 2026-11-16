@@ -149,6 +149,7 @@ mkdir -p "$CFG/eval"; [ -f "$CFG/eval/cases.txt" ] || cp "$HERE/eval/cases.txt" 
 # The dictionary and the vault map are user-tunable — install only if missing.
 [ -f "$CFG/replacements.txt" ] || cp "$HERE/replacements.txt" "$CFG/"
 [ -f "$CFG/brain-map.txt" ]    || cp "$HERE/brain-map.txt" "$CFG/"
+[ -f "$CFG/snippets.txt" ]     || cp "$HERE/snippets.txt" "$CFG/"
 
 # config.sh is the shipped defaults, replaced on every install; the user's settings live in
 # config.local.sh, which senti-config.sh carries over once and never overwrites again.

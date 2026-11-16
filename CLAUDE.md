@@ -39,7 +39,7 @@ This repo is the **source**. It is not where the app runs. `./install.sh` deploy
 
 **Workflow: edit files in this repo, then run `./install.sh` to deploy.** Don't hand-edit
 `~/.config/senti/*` or `~/.hammerspoon/init.lua` as the primary change — those are
-install targets and get overwritten. (Exception: `replacements.txt`, `eval/cases.txt`, `brain-map.txt` are user-tunable and
+install targets and get overwritten. (Exception: `replacements.txt`, `snippets.txt`, `eval/cases.txt`, `brain-map.txt` are user-tunable and
 install **only if missing**, so a re-run never clobbers the user's local tuning.
 `config.sh` is shipped DEFAULTS, replaced on every install by `senti-config.sh` (previous copy kept as
 `config.sh.v<N>.bak`). User settings live in `~/.config/senti/config.local.sh`, which config.sh sources
@@ -133,7 +133,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 - **Language:** `WF_LANG` resolves env / `config.local.sh` → `~/.cache/senti/lang.pref` (menu, via
   `senti-model.sh lang <code|auto>`, read with `read`, never sourced, validated) → `en`. It rides EACH
   `/inference` request as `language=`, so a switch reloads nothing; measured 15 Nov 2026 on the turbo
-  model: `es` 840 ms, `auto` 1,590 ms (a detection pass), same clip. base.en is English only, so config.sh
+  model: `es` 840 ms, `auto` 1,590 ms (a detection pass), same clip, no `audio_ctx`; through the real path with `audio_ctx` 575 ms against 904 ms. base.en is English only, so config.sh
   resolves the model to Accurate for any other language. `clean_text` uses its English filler rules only
   for `en` ("um" is a word in German and Portuguese); the heavy-turn trigger stays English.
 - **Recording:** `sox -d` → 16 kHz mono WAV, stopped with **SIGINT** (finalizes the header).
@@ -261,6 +261,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 | Hold **Fn (🌐)** | Command (transform selected text by voice). Nothing selected → runs the Prompt path (`runCommand` → `runAIMode`); the owner used Fn this way 15 of 15 turns on 15 Nov 2026 |
 | **⌃⌥V** | Context (screenshot + voice → context-aware reply/edit) |
 | `⌃⌥D` / `⌃⌥P` / `⌃⌥C` | hands-free toggle versions |
+| say a snippet phrase alone | Dictate types its text (`snippets.txt`, `wf.snippet`; whole-utterance match only, verbatim mode only, log has the length never the text) |
 | `⌃⌥L` | paste the last result again (memory only, 5 min TTL, cleared on screen lock; a file-local `LAST`, never on `wf.*`) |
 
 Three macOS permissions on **Hammerspoon**: Accessibility (type), Microphone (record),
@@ -303,6 +304,10 @@ hostile input, not a remote attacker. Verified defenses — don't regress them:
   90 ms cold, so it is warmed at load) so Universal Clipboard does not sync it; the marked write is
   the fallback. Checked on this Mac 15 Nov 2026 (write, read-back, marks); NOT confirmed with a
   second device.
+- **Mute while recording** (opt-in, `mute_recording` in ui.pref): `wf.muteSoon` mutes the default output
+  0.35 s into a recording (after the cue) and `wf.unmute` restores it on every state other than recording
+  and at load, from the marker `~/.cache/senti/muted-by-senti` (written BEFORE muting). Only a device
+  Senti muted is unmuted. Tested on stubs; not yet on real audio.
 - **Secure input** (a password field, Terminal's Secure Keyboard Entry) hides key-down events from
   Senti: hold-to-talk still works (modifier flags are delivered) but Esc cancel and the
   shortcut-cancel cannot. `wf.diag()` reports `secure-input=`; the menu says so.

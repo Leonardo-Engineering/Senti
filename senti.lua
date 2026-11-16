@@ -452,17 +452,40 @@ end
 
 -- ~/.config/senti/ui.pref: strict key=value lines, never sourced or executed.
 function wf.parseUIPref(text)
-  local p = { prompt_screen = true, panel_seen = false }
+  local p = { prompt_screen = true, panel_seen = false, mute_recording = false }
   for line in (type(text) == "string" and text or ""):gmatch("[^\n]+") do
     local k, v = line:match("^%s*([%w_]+)%s*=%s*([01])%s*$")
     if k == "prompt_screen" then p.prompt_screen = (v == "1")
-    elseif k == "panel_seen" then p.panel_seen = (v == "1") end
+    elseif k == "panel_seen" then p.panel_seen = (v == "1")
+    elseif k == "mute_recording" then p.mute_recording = (v == "1") end
   end
   return p
 end
 function wf.serializeUIPref(p)
   return "prompt_screen=" .. (p.prompt_screen and "1" or "0") .. "\n" ..
-         "panel_seen=" .. (p.panel_seen and "1" or "0") .. "\n"
+         "panel_seen=" .. (p.panel_seen and "1" or "0") .. "\n" ..
+         "mute_recording=" .. (p.mute_recording and "1" or "0") .. "\n"
+end
+-- Snippets (~/.config/senti/snippets.txt): "what you say | what Senti types". Only a WHOLE
+-- dictation that is exactly the phrase expands (compared without case or outer punctuation),
+-- so a phrase inside a sentence never fires. "\n" in the text is a line break. Local only.
+function wf.snipKey(s)
+  s = (type(s) == "string" and s or ""):lower():gsub("%s+", " ")
+  s = s:gsub("^[%s%p]+", ""):gsub("[%s%p]+$", "")
+  return s
+end
+function wf.parseSnippets(text)
+  local t = {}
+  for line in (type(text) == "string" and text or ""):gmatch("[^\r\n]+") do
+    if not line:match("^%s*#") then
+      local k, v = line:match("^(.-)|(.*)$")
+      if k and v then
+        k = wf.snipKey(k); v = v:gsub("^%s+", ""):gsub("%s+$", ""):gsub("\\n", "\n")
+        if k ~= "" and v ~= "" then t[k] = v end
+      end
+    end
+  end
+  return t
 end
 -- ── END pure helpers ──────────────────────────────────────────────────
 
@@ -966,6 +989,42 @@ wf.escTap = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, function(e)
   return acted == true   -- swallow only the Esc that cancelled
 end)
 
+-- Opt-in (menu: "Mute other audio while recording"): music or a call in the speakers ends up
+-- in the microphone. Mute the output a moment after the start cue, and ALWAYS put it back: on
+-- every state other than recording, and at launch if a marker says a mute was left behind.
+-- Only a device Senti itself muted is unmuted; one the user had muted stays muted.
+wf.MUTEFLAG = wf.HOME .. "/.cache/senti/muted-by-senti"
+function wf.unmute()
+  if wf.muteTimer then wf.muteTimer:stop(); wf.muteTimer = nil end
+  local uid = wf.mutedUID
+  if not uid then
+    local f = io.open(wf.MUTEFLAG, "r")
+    if not f then return end
+    uid = f:read(256); f:close()
+  end
+  wf.mutedUID = nil
+  pcall(function()
+    local dev = uid and uid ~= "" and hs.audiodevice.findOutputByUID(uid) or nil
+    if dev then dev:setMuted(false) end
+  end)
+  os.remove(wf.MUTEFLAG)
+end
+function wf.muteSoon()
+  if wf.muteTimer then wf.muteTimer:stop(); wf.muteTimer = nil end
+  if not (wf.prefs and wf.prefs.mute_recording) then return end
+  wf.muteTimer = hs.timer.doAfter(0.35, function()      -- after the start cue has played
+    wf.muteTimer = nil
+    if wf.state ~= "recording" or wf.mutedUID then return end
+    pcall(function()
+      local dev = hs.audiodevice.defaultOutputDevice()
+      if not dev or dev:muted() ~= false then return end     -- already muted by the user, or no mute control
+      local uid = dev:uid()
+      local f = io.open(wf.MUTEFLAG, "w"); if f then f:write(uid or ""); f:close() end   -- marker first: a crash must be recoverable
+      if dev:setMuted(true) then wf.mutedUID = uid else os.remove(wf.MUTEFLAG) end
+    end)
+  end)
+end
+
 function wf.setState(s)
   wf.state = s
   if wf.bar then
@@ -981,6 +1040,7 @@ function wf.setState(s)
       wf.escTap:stop()
     end
   end
+  if s == "recording" then wf.muteSoon() else wf.unmute() end
   -- Watchdog: never let a silent task or a missed key-up wedge the tool.
   if wf.stuckTimer then wf.stuckTimer:stop(); wf.stuckTimer = nil end
   if s == "working" then
@@ -1269,9 +1329,24 @@ function wf.restoreClipboard(saved, ourCount)
   if saved.text then hs.pasteboard.setContents(saved.text) end
 end
 
-function wf.insert(text)  -- dictation insert: trailing space + clipboard restore
+wf.SNIPPETS = wf.HOME .. "/.config/senti/snippets.txt"
+local SNIP = { mtime = nil, map = {} }
+function wf.snippet(raw)      -- the text for a dictation that is exactly a snippet phrase, else nil
+  local ok, res = pcall(function()
+    local at = hs.fs.attributes(wf.SNIPPETS)
+    if not at then SNIP.mtime, SNIP.map = nil, {}; return nil end
+    if at.modification ~= SNIP.mtime then
+      local f = io.open(wf.SNIPPETS, "r"); local text = f and f:read(65536) or ""; if f then f:close() end
+      SNIP.map = wf.parseSnippets(text); SNIP.mtime = at.modification
+    end
+    return SNIP.map[wf.snipKey(raw)]
+  end)
+  return ok and res or nil
+end
+
+function wf.insert(text, exact)  -- dictation insert: trailing space + clipboard restore (exact: as given)
   if not text or text:gsub("%s+","") == "" then wf.log("insert: empty, nothing to paste"); return end
-  if wf.TRAILING_SPACE then text = text .. " " end
+  if wf.TRAILING_SPACE and not exact then text = text .. " " end
   if wf.focusMoved() then wf.handBack(text, "focus moved"); return end
   wf.deliver(text, { label = "insert: pasted", checkFocus = true })
 end
@@ -2091,7 +2166,11 @@ function wf.runAIMode(raw, turn)
       else textPath() end
     end)
   else
-    wf.setState("idle"); wf.insert(raw); wf.sweepCache()
+    wf.setState("idle")
+    local snip = wf.snippet(raw)
+    if snip then wf.log("snippet: " .. #snip .. " chars"); wf.insert(snip, true)   -- counts only, never the text
+    else wf.insert(raw) end
+    wf.sweepCache()
   end
 end
 
@@ -2292,7 +2371,7 @@ function wf.setLang(code)
     if now ~= code then
       wf.notify("Language stays " .. wf.langName(now) .. ":\nWF_LANG is set in config.local.sh.", 6, wf.TONE.warn)
     elseif code == "auto" then
-      wf.notify("Senti now detects the language.\nThis adds about 0.7 s to each dictation.", 5, wf.TONE.ok)
+      wf.notify("Senti now detects the language.\nThis adds 0.3 to 0.8 s to each dictation.", 5, wf.TONE.ok)
     else
       wf.notify("Dictation language: " .. wf.langName(code), 3, wf.TONE.ok)
     end
@@ -2302,7 +2381,7 @@ function wf.langMenu(cur)
   local m, listed = {}, false
   for _, l in ipairs(wf.LANGS) do
     if l[1] == cur then listed = true end
-    m[#m + 1] = { title = (l[1] == cur and "✓ " or "   ") .. l[2] .. (l[1] == "auto" and " (about 0.7 s slower)" or ""), fn = function() wf.setLang(l[1]) end }
+    m[#m + 1] = { title = (l[1] == cur and "✓ " or "   ") .. l[2] .. (l[1] == "auto" and " (0.3 to 0.8 s slower)" or ""), fn = function() wf.setLang(l[1]) end }
     if l[1] == "auto" then m[#m + 1] = { title = "-" } end
   end
   if not listed then table.insert(m, 1, { title = "✓ " .. cur .. " (from config.local.sh)", disabled = true }) end
@@ -2397,6 +2476,14 @@ local function menu()
           end },
       } },
     { title = "Language: " .. wf.langName(curLang), menu = wf.langMenu(curLang) },
+    { title = "Mute other audio while recording", checked = (wf.prefs and wf.prefs.mute_recording) and true or false,
+      fn = function()
+        wf.prefs.mute_recording = not wf.prefs.mute_recording; wf.savePrefs()
+        if not wf.prefs.mute_recording then wf.unmute() end
+        wf.log("prefs: mute_recording=" .. (wf.prefs.mute_recording and "1" or "0"))
+        wf.notify(wf.prefs.mute_recording and "Sound is muted while you record,\nand restored when you stop." or "Senti will not mute sound while recording.", 4, wf.TONE.ok)
+      end },
+    { title = "Edit snippets…", fn = function() hs.execute("/usr/bin/open -t '" .. wf.SNIPPETS .. "'") end },
     { title = "-" },
     { title = "AI provider and key…", fn = function() wf.openPanel() end },
     { title = "AI", menu = aiMenu() },
@@ -3204,6 +3291,7 @@ wf.refreshKeys(function(st)
   wf.prefs.panel_seen = true; wf.savePrefs()
   wf.firstRunTimer = hs.timer.doAfter(1.5, function() wf.firstRunTimer = nil; wf.openPanel() end)
 end)
+wf.unmute()   -- a mute left behind by a crash or a reload mid-recording
 wf.log("=== init.lua loaded ===")
 -- Warm the JXA bridge (the first call costs about 90 ms, later ones about 20) off the paste path.
 wf.jxaWarm = hs.timer.doAfter(5, function() pcall(hs.osascript.javascript, "1") end)
