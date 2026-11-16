@@ -83,7 +83,7 @@ disappears. Things worth knowing:
 
 - **Cancelling.** Press Esc while the pill is showing. A key pressed in the first 1.5 seconds of a hold
   also cancels quietly, so right ⌘+C or Fn+arrow still work as shortcuts. A click does not cancel (you
-  may be placing the cursor), but a hold with a click and no speech ends without an alert. Esc cannot cancel while an app
+  may be placing the cursor), but a hold under 3 seconds with a click and no speech ends without an alert. Esc cannot cancel while an app
   has secure keyboard entry on (a password field, or Terminal's Secure Keyboard Entry); the menu says
   when that is the case.
 - **Toggles.** `⌃⌥D`, `⌃⌥P` and `⌃⌥C` start a recording, and the same shortcut stops it.
@@ -400,7 +400,8 @@ From your copy of the repository:
 ```
 
 It lists what it will remove and asks first. Every question defaults to No. Hammerspoon itself stays
-installed. The uninstaller turns its Dock and menu bar icons back on; it still opens at login until
+installed. The uninstaller turns its Dock and menu bar icons back on (only when Senti's config was the one in
+place); it still opens at login until
 you untick that in Hammerspoon's preferences, or remove Hammerspoon if you no longer use it. It:
 
 - stops and removes the speech server's LaunchAgent;

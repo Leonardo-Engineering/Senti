@@ -2,6 +2,17 @@
 
 All notable changes to Senti. Dates are in US Eastern time.
 
+## [Unreleased]
+
+### Fixed
+
+- Wording only, no behaviour change since 1.1.0: three lines in the 1.1.0 notes below described an
+  earlier state of the same release. A hold with a click ends quietly only when it is under 3 seconds.
+  `uninstall.sh` turns Hammerspoon's icons back on only when Senti's config was the one in place. The
+  focus check ignores counts of up to 3 digits in a title, not any number.
+- The self-test now covers dictionary rules in Chinese and Japanese text, an answer that only mentions
+  the `<r>` tag, and which closing mark a dropped filler hands back.
+
 ## [1.1.0] 2026-11-15
 
 ### Added
@@ -117,7 +128,7 @@ All notable changes to Senti. Dates are in US Eastern time.
   - A copy you make while a Command request runs is kept on success and on Esc, not only on failure.
   - A hold key pressed while Senti is still writing the last result now says so, and that result is
     still typed once you let go.
-  - A hold with a click and no speech (right Command+click, right Option+drag) ends quietly; it used to
+  - A hold under 3 seconds with a click and no speech (right Command+click, right Option+drag) ends quietly; it used to
     raise the "mic may be muted" alert. The click does not cancel the take, so you can still hold, click
     into a field and speak.
   - Command mode's 75 second limit starts when its request starts, as in Prompt and Context.
@@ -134,7 +145,7 @@ All notable changes to Senti. Dates are in US Eastern time.
     inside the app's 75 second limit.
   - The Speed choices and Restart engine refuse while Senti is recording or working; switching then lost
     the words in flight.
-  - `uninstall.sh` turns Hammerspoon's Dock and menu bar icons back on and says how to stop it opening at
+  - `uninstall.sh` turns Hammerspoon's Dock and menu bar icons back on (when Senti's config was in place) and says how to stop it opening at
     login.
   - "codex-notes" or "claude.md" in a window title no longer picks that model's guidance.
   - A language code whisper does not know ("eng", "zz") in `config.local.sh` falls back to English; the
@@ -146,7 +157,7 @@ All notable changes to Senti. Dates are in US Eastern time.
   - The Language menu refuses while Senti is recording or working, like the Speed choices.
   - The "still writing the last one" notice needs the hold key down alone for 0.4 seconds, so an accent
     typed with right Option or a right Command shortcut does not raise it.
-  - An unread count anywhere in a window title is ignored by the focus check.
+  - An unread count of up to 3 digits anywhere in a window title is ignored by the focus check.
   - An answer whose closing tag was cut off is kept. A pinned provider no longer borrows another
     provider's model id. A filler before a comma no longer turns the sentence into a question.
   - The self-test no longer reaches the real Hammerspoon preferences through `uninstall.sh`.

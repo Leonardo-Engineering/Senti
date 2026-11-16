@@ -193,7 +193,8 @@ with your Keychain items, and about the speech models. See the README's Uninstal
   Session memory is recalled only for the same project, not just the same window. Command mode no longer reads the selection of a window you moved to after
   speaking, so that text is not sent. Context mode without a screenshot keeps your words on the
   clipboard. A window title picks a model's guidance only by a strict rule. Anthropic's default model
-  is `claude-haiku-5-5`. The uninstaller turns Hammerspoon's own icons back on.
+  is `claude-haiku-5-5`. The uninstaller turns Hammerspoon's own icons back on when Senti's
+  config was the one in place.
 - **14 November 2026 (1.1):** Notion added as a second notes source beside Obsidian, off
   by default, with its token in the Keychain. Optional retrieval of one more note from the project's
   vault folder, off by default. Both send only on heavy turns. The screenshot is now shrunk at
