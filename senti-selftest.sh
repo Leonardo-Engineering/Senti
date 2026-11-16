@@ -993,11 +993,14 @@ FAKESOX
 /bin/chmod 700 "$FSOX"
 # One run each, measured inside the run: the file size when stop is called against its final
 # size. Comparing two separate runs flapped on a slow runner (their start-up times differ).
+# Wait for the recording to hold more than half a second of audio (the tail's own threshold),
+# however long the runner takes to get there. A fixed sleep was too short on a slow CI machine.
+wait_audio() { local i; for i in $(/usr/bin/seq 1 100); do [ "$(/usr/bin/stat -f %z "$HOME/.cache/senti/capture.wav" 2>/dev/null || echo 0)" -ge 20000 ] && return 0; /bin/sleep 0.1; done; return 1; }
 capgrow() {   # capgrow <tail ms> → "<bytes added after key-up> <new 'stop: tail' log lines>"
   local n0 n1 s1 s2
   n0="$(/usr/bin/grep -c 'stop: tail' "$WF_LOG" 2>/dev/null || true)"
   WF_SOX="$FSOX" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1
-  /bin/sleep 1.0
+  wait_audio
   s1="$(/usr/bin/stat -f %z "$HOME/.cache/senti/capture.wav" 2>/dev/null || echo 0)"
   WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS="$1" WF_URL="http://127.0.0.1:1" bash "$CFG/senti-dictate.sh" stop >/dev/null 2>&1
   s2="$(/usr/bin/stat -f %z "$HOME/.cache/senti/capture.wav" 2>/dev/null || echo 0)"
@@ -1014,18 +1017,28 @@ EOF
   && ok "a 300 ms tail keeps recording after key-up ($G3 bytes more; $G0 with the tail off)" \
   || bad "the tail: $G3 bytes and $L3 log lines with 300 ms, $G0 bytes and $L0 log lines with it off"
 NT0="$(/usr/bin/grep -c 'stop: tail' "$WF_LOG" 2>/dev/null || true)"
-TAPOUT="$(WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS=300 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1; /bin/sleep 0.2; WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS=300 WF_URL="http://127.0.0.1:1" bash "$CFG/senti-dictate.sh" stop 2>/dev/null)"
+TAPOUT="$(WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS=300 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1; for _i in $(/usr/bin/seq 1 100); do [ -s "$HOME/.cache/senti/capture.wav" ] && break; /bin/sleep 0.02; done; WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS=300 WF_URL="http://127.0.0.1:1" bash "$CFG/senti-dictate.sh" stop 2>/dev/null)"
 NT1="$(/usr/bin/grep -c 'stop: tail' "$WF_LOG" 2>/dev/null || true)"
 [ "$TAPOUT" = "__WF_TAP__" ] && [ "$NT0" = "$NT1" ] && ok "a brushed key gets no tail and is still reported as a tap" \
                                                     || bad "tap with the tail on: output '$TAPOUT', tail lines $NT0 → $NT1"
-WF_SOX="$FSOX" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1; /bin/sleep 0.9
-( WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS=500 WF_URL="http://127.0.0.1:1" bash "$CFG/senti-dictate.sh" stop > "$HOME/.cache/senti/stop.out" 2>/dev/null ) &
-/bin/sleep 0.15; WF_SOX="$FSOX" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" cancel >/dev/null 2>&1; wait
-CSTOP="$(/bin/cat "$HOME/.cache/senti/stop.out" 2>/dev/null)"; /bin/rm -f "$HOME/.cache/senti/stop.out"
-LEFT="$(/bin/ps -Ao command= | /usr/bin/grep -c "[f]akesox -d" || true)"
-[ -z "$CSTOP" ] && [ "$LEFT" = "0" ] && /usr/bin/grep -q 'stop: cancelled during the tail' "$WF_LOG" \
+# Cancel while stop is inside its tail. The cancel is sent once ps shows stop's own 0.5 s sleep,
+# so the test does not depend on how fast the machine starts a shell; up to 3 tries, because the
+# cancel still has to land inside that half second.
+CTAIL=0; CSTOP=""; LEFT=0
+for _try in 1 2 3; do
+  WF_SOX="$FSOX" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1; wait_audio
+  NC0="$(/usr/bin/grep -c 'stop: cancelled during the tail' "$WF_LOG" 2>/dev/null || true)"
+  ( WF_SOX="$FSOX" WF_SOUNDS=0 WF_TAIL_MS=500 WF_URL="http://127.0.0.1:1" bash "$CFG/senti-dictate.sh" stop > "$HOME/.cache/senti/stop.out" 2>/dev/null ) &
+  for _i in $(/usr/bin/seq 1 100); do PSNOW="$(/bin/ps -Ao command=)"; case "$PSNOW" in *"sleep 0.500"*) break ;; esac; /bin/sleep 0.02; done
+  WF_SOX="$FSOX" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" cancel >/dev/null 2>&1; wait
+  CSTOP="$(/bin/cat "$HOME/.cache/senti/stop.out" 2>/dev/null)"; /bin/rm -f "$HOME/.cache/senti/stop.out"
+  LEFT="$(/bin/ps -Ao command= | /usr/bin/grep -c "[f]akesox -d" || true)"
+  NC1="$(/usr/bin/grep -c 'stop: cancelled during the tail' "$WF_LOG" 2>/dev/null || true)"
+  [ "$NC1" -gt "$NC0" ] && { CTAIL=1; break; }
+done
+[ "$CTAIL" = 1 ] && [ -z "$CSTOP" ] && [ "$LEFT" = "0" ] \
   && ok "Esc during the tail: nothing is transcribed and no recorder is left" \
-  || bad "cancel during the tail: stop printed '$CSTOP', recorders left $LEFT"
+  || bad "cancel during the tail: seen=$CTAIL, stop printed '$CSTOP', recorders left $LEFT"
 /usr/bin/grep -q -- '-d -D --buffer 2048' "$CFG/senti-dictate.sh" && ok "the recorder runs without dither, so a muted microphone reads as exact zeros (dead mic, not a quiet room)" || bad "sox records with dither: a muted mic is mistaken for silence"
 /bin/rm -f "$FSOX" "$HOME/.cache/senti/capture.wav"
 if [ "$CI" = 1 ]; then
@@ -1069,7 +1082,8 @@ FAKESOX
 printf '#!/bin/bash\nprintf "%%s\\n" "$@" > "%s"\nprintf "%%s" "$FAKE_TEXT"\n' "$CARGS" > "$FCURL"; /bin/chmod 700 "$FSOX2" "$FCURL"
 say_as() {   # say_as <lang> <text the stand-in server returns> → what senti-dictate.sh stop prints
   echo "$1" > "$LP"
-  WF_SOX="$FSOX2" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1; /bin/sleep 0.7
+  WF_SOX="$FSOX2" WF_SOUNDS=0 bash "$CFG/senti-dictate.sh" start >/dev/null 2>&1
+  for _i in $(/usr/bin/seq 1 100); do [ -s "$HOME/.cache/senti/capture.wav" ] && break; /bin/sleep 0.1; done
   WF_SOX="$FSOX2" WF_CURL="$FCURL" FAKE_TEXT="$2" WF_SOUNDS=0 WF_TAIL_MS=0 bash "$CFG/senti-dictate.sh" stop 2>/dev/null
 }
 O1="$(say_as es 'Um, quiero um café. Uh.')"; A1="$(/usr/bin/grep -c '^language=es$' "$CARGS" 2>/dev/null || true)"
