@@ -5,7 +5,8 @@
 #   $1 = hint (frontmost app name from Hammerspoon, e.g. "Claude", "ChatGPT", "Cursor")
 #
 # Prints the guidance block to inject, or nothing if there's no useful match.
-# Resolution order: explicit menu-bar choice → frontmost-app match → universal only.
+# Resolution order: target.pref (a manual escape hatch; no menu writes it) → frontmost-app
+# match → universal only.
 #
 # Detection is free: the frontmost app name is a local, instant signal, so this
 # costs no extra API call and no latency. The knowledge base lives in

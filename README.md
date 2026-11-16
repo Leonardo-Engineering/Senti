@@ -19,6 +19,8 @@ Senti is free and MIT licensed, with no account.
 
 *Senti* is Italian for "listen."
 
+**Contents:** [Prompt mode](#prompt-mode-a-prompt-written-for-where-it-is-going) · [Modes](#modes) · [Speed](#speed) · [Install](#install) · [AI key](#add-an-ai-key-optional) · [Models](#bring-your-own-ai) · [Second brain](#second-brain) · [Privacy](#privacy-and-security) · [Uninstall](#uninstall) · [How it works](#how-it-works) · [Config](#config)
+
 ## What it looks like
 
 <p align="center"><img src="assets/screenshots/pill.png" width="198" alt="Senti's recording pill: white bars while you dictate, a Prompt label in Prompt mode, blue bars and Thinking while the prompt is written"></p>
@@ -76,16 +78,37 @@ brief.
 | `⌃⌥D` / `⌃⌥P` / `⌃⌥C` | Toggles | Hands-free versions of Dictate, Prompt and Command. |
 | `⌃⌥L` | **Paste last** | Pastes the last result again. Senti keeps it in memory for 5 minutes, never on disk, and forgets it when the screen locks. |
 
-Press Esc while the pill is showing to cancel. A small pill at the bottom of the screen shows your
-live microphone level while you speak, then disappears. The menu-bar icon holds the speed setting
-(Fast or Accurate), the AI provider and key, the model picker, permissions and an engine restart.
+A small pill at the bottom of the screen shows your live microphone level while you speak, then
+disappears. Things worth knowing:
+
+- **Cancelling.** Press Esc while the pill is showing. A key pressed in the first 1.5 seconds of a hold
+  also cancels quietly, so right ⌘+C or Fn+arrow still work as shortcuts. Esc cannot cancel while an app
+  has secure keyboard entry on (a password field, or Terminal's Secure Keyboard Entry); the menu says
+  when that is the case.
+- **Toggles.** `⌃⌥D`, `⌃⌥P` and `⌃⌥C` start a recording, and the same shortcut stops it.
+- **Limits.** A recording stops itself after 150 seconds and puts the text on the clipboard without
+  pasting. An AI request that has not answered after 75 seconds is abandoned and your words are handed
+  back.
+- **How it types.** Senti pastes through the clipboard and then puts your clipboard back. If Option,
+  Control, Fn or Shift are still held it waits for them; if they stay held the text goes to the clipboard.
+- **Cleanup.** Dictation drops filler words (um, uh, erm, hmm) and one opening "So," "Okay," "Well," or
+  "Like,". `WF_REMOVE_FILLERS=0` in `config.local.sh` turns that off. Start and stop sounds:
+  `WF_SOUNDS=0` silences them.
+- **Another dictation tool on the same keys.** Senti checks whether Wispr Flow is running and warns you,
+  because both listen on Fn and right ⌘.
+
+The menu-bar icon holds the language, the speed setting (Accurate, Fast or Parakeet), the AI provider,
+key and model, a switch to mute other audio while recording, your snippets, permissions and an engine
+restart.
 
 ## Speed
 
 Measured on an M3 Pro on 13 November 2026, with recorded clips on the default (Accurate) speech model,
 from letting go of the key until the text is ready to paste:
 
-- about 0.5 to 0.6 seconds for a dictation under 14 seconds, and about 1 to 1.1 seconds for a longer one;
+- about 0.5 to 0.6 seconds for a dictation under 14 seconds, and about 1 to 1.1 seconds for a longer one.
+  Since 15 November Senti also keeps recording for 100 ms after you let go, so your last word is not
+  cut; that adds about 0.13 seconds to these figures (`WF_TAIL_MS=0` in `config.local.sh` turns it off);
 - on the Fast model (`base.en`), 0.2 to 0.4 seconds in the same day's tests, measured before this
   release's speedups.
 
@@ -127,10 +150,14 @@ What `install.sh` does, in order:
 4. **Replaces `~/.hammerspoon/init.lua`** with Senti's. If you already had your own `init.lua`, it is
    first saved as `init.lua.pre-senti.<date>-<time>` in the same folder.
 5. Installs a LaunchAgent (`io.senti.server`) that keeps the speech server running on `127.0.0.1`,
-   and `~/Applications/Senti.app`, a menu-bar launcher.
+   and `~/Applications/Senti.app`, an on and off switch: opening it starts Senti, and opening it again
+   while Senti runs quits Hammerspoon.
 6. Moves a key file left by an older install into the Keychain (`senti-key.sh migrate`; the file is
    deleted only after the Keychain copy reads back the same). Then it offers to add an AI key (see
    below) when none is stored yet. The offer is skipped with `--yes`; the move is not.
+
+Senti also sets Hammerspoon to open at login and hides Hammerspoon's own menu-bar and Dock icons (its
+own icon replaces them). To start Senti after installing, open Hammerspoon or `Senti.app`.
 
 `./install.sh --yes` installs missing pieces without asking. Running it again later updates Senti.
 Put your own settings in `~/.config/senti/config.local.sh`: `install.sh` never overwrites that file.
@@ -169,12 +196,12 @@ curl -L -o ~/.local/share/whisper-models/ggml-base.en.bin \
 ```
 
 **Parakeet (optional).** NVIDIA's Parakeet model runs through the `parakeet-cli` that Homebrew's
-whisper-cpp already installs. Measured on one M-series Mac, key-up to text: a 4 second clip took 0.40
+whisper-cpp already installs. Measured on an M3 Pro on 15 November 2026, key-up to text: a 4 second clip took 0.40
 seconds against 0.50 for the default model, a 13 second clip 0.50 against 0.58, and a 21 second clip
-0.62 against 1.09. The gain is mostly on dictations longer than 14 seconds. It knows 25 European languages and takes no vocabulary hint, so
+0.62 against 1.09. The gain is mostly on dictations longer than 14 seconds. It detects the language itself among 25 European ones (the Language menu does not steer it, and for any other language Senti uses the default model) and takes no vocabulary hint, so
 project names lean on your `replacements.txt`. Download the model (669 MB), check it, then pick
 Speed, then Parakeet in the menu bar. Senti uses Parakeet for dictations under 30 seconds and the default model for longer ones and whenever
-Parakeet fails. On real recorded speech the two were close in accuracy; the default model stays the default.
+Parakeet fails. On real recorded speech the 2 engines were close in accuracy; the default model stays the default.
 
 ```bash
 curl -L -o ~/.local/share/whisper-models/ggml-parakeet-tdt-0.6b-v3-q8_0.bin \
@@ -233,7 +260,7 @@ Prices are US dollars per 1 million tokens, from `ai-models.json`. OpenAI prices
 11 November 2026 on [OpenAI's pricing page](https://developers.openai.com/api/docs/pricing). Anthropic prices
 were checked on 15 November 2026 on [Anthropic's pricing page](https://platform.claude.com/docs/en/about-claude/pricing). OpenRouter prices come from OpenRouter's
 model list, fetched 14 November 2026; 2 that had changed by 15 November (Kimi and DeepSeek) were updated
-that day. Through OpenRouter one key reaches models from 9 labs; the list
+that day. Through OpenRouter one key reaches models from 10 labs; the list
 is picked from OpenRouter's catalog and its most-used models.
 
 **OpenAI**
@@ -280,8 +307,12 @@ data (`data_collection: deny`).
 bash ~/.config/senti/senti-key.sh use openai gpt-6.1-terra
 ```
 
-A `WF_AI_PROVIDER`, `WF_TEXT_MODEL` or `WF_VISION_MODEL` line in `~/.config/senti/config.sh`
-outranks the menu choice. They ship commented out; leave them that way unless you want a fixed pin.
+A `WF_AI_PROVIDER`, `WF_TEXT_MODEL` or `WF_VISION_MODEL` line in `~/.config/senti/config.local.sh`
+outranks the menu choice. Add one only if you want a fixed pin. (Put settings in `config.local.sh`:
+`config.sh` holds the defaults and every update replaces it.)
+
+With an Anthropic Opus or Sonnet model, a request the model declines is re-run by Anthropic on another
+of its models. `WF_ANTHROPIC_FALLBACKS=0` turns that off.
 
 Models and prices change. To check whether your key can use a model right now:
 
@@ -299,7 +330,8 @@ can use either or both. No other turn sends anything from your notes.
 people. It picks the note for the project in the window title and sends its `## Senti` section if it
 has one, otherwise its `## For future Claude` section, otherwise its first 10 lines, capped at 700
 bytes. Notes and folders that resolve outside the listed folders, including through symlinks, are
-ignored. Add to `~/.config/senti/config.sh`:
+ignored. Senti looks for the vault at `~/Documents/Obsidian Vault`; set `WF_VAULT` if yours is elsewhere.
+Add to `~/.config/senti/config.local.sh`:
 
 ```bash
 WF_BRAIN=1
@@ -324,7 +356,7 @@ pages you shared with it.
    `bash ~/.config/senti/senti-key.sh set notion`
 4. Map the page to a project in `~/.config/senti/brain-map.txt`, one line per project:
    `myproject|notion:https://www.notion.so/My-Page-0123456789abcdef0123456789abcdef`
-5. Turn it on in `~/.config/senti/config.sh`: `WF_BRAIN_NOTION=1`
+5. Turn it on in `~/.config/senti/config.local.sh`: `WF_BRAIN_NOTION=1`
 
 On a heavy turn in a mapped project, Senti reads the page from Notion after you stop speaking. That
 request carries the page id and your token, nothing from your speech or window title, and Senti never
@@ -365,7 +397,9 @@ From your copy of the repository:
 ./uninstall.sh
 ```
 
-It lists what it will remove and asks first. Every question defaults to No. It:
+It lists what it will remove and asks first. Every question defaults to No. Hammerspoon itself stays
+installed, still set to open at login with its own icons hidden; change that in Hammerspoon's
+preferences or remove Hammerspoon if you no longer use it. It:
 
 - stops and removes the speech server's LaunchAgent;
 - puts back your previous `~/.hammerspoon/init.lua` from the newest `init.lua.pre-senti.*` backup
@@ -408,24 +442,27 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 - `senti-command.sh`: transforms selected text.
 - `senti-judge.sh` / `senti-eval.sh`: prompt-quality judge and offline eval harness.
 - `senti-selftest.sh`: the check suite. `--ci` runs it offline from a checkout.
-- `senti-model.sh`: Fast and Accurate model switch.
+- `senti-model.sh`: switches the speech model (Accurate, Fast, Parakeet) and the language.
+- `senti-config.sh`: installs the default settings and carries yours into `config.local.sh`.
 - `senti-mic-auth.swift`: brings up the macOS microphone permission prompt.
 - `senti.lua`: Hammerspoon hotkeys, pill, menu bar, key panel, state machine and watchdog.
 - `install.sh` / `uninstall.sh`: put Senti on your Mac and take it off.
 
 ## Config
 
-`~/.config/senti/config.sh` holds the settings: language (`WF_LANG`), efforts (`WF_EFFORT`,
-`WF_VISION_EFFORT`), screenshot size (`WF_SHOT_PX`) and the notes sources (`WF_BRAIN`,
-`WF_BRAIN_RETRIEVE`, `WF_BRAIN_NOTION`). 2 more are read
-from it but have no line there until you add one: the silence threshold (`WF_SILENCE_THOLD`, default
-0.005) and the operating layer (`WF_OPERATING_LAYER=0` turns it off). Edit
+Your settings go in `~/.config/senti/config.local.sh`, which no update touches. `config.sh` beside it
+holds the defaults and their explanations, and every update replaces it. Common settings: efforts
+(`WF_EFFORT`, `WF_VISION_EFFORT`), screenshot size (`WF_SHOT_PX`), the notes sources (`WF_BRAIN`,
+`WF_BRAIN_RETRIEVE`, `WF_BRAIN_NOTION`), the recording tail (`WF_TAIL_MS`), the silence threshold
+(`WF_SILENCE_THOLD`, default 0.005) and the operating layer (`WF_OPERATING_LAYER=0` turns it off). The
+language is set in the menu bar; a `WF_LANG` line overrides the menu. Edit
 `replacements.txt` for vocabulary fixes (for example "cloud md" to `CLAUDE.md`) and
 `eval/cases.txt` for eval cases.
 
 `snippets.txt` holds phrases that type a fixed text when you say them on their own, one per line as
-`what you say | what to type` (`\n` is a line break). Say "my email" alone and Senti types the address;
-say it inside a sentence and nothing changes. The file is read on your Mac and never sent anywhere.
+`what you say | what to type` (`\n` is a line break). Add a line such as `my email | you@example.com`, say "my email" alone while dictating (right ⌥), and
+Senti types the address; say it inside a sentence and nothing changes. The file ships with examples
+commented out, and the menu bar has Edit snippets. The file is read on your Mac and never sent anywhere.
 
 `bash ~/.config/senti/senti-selftest.sh` checks the whole install: the speech engine, a transcription
 round trip, the config version, keys (presence only), the icon build, session isolation and the

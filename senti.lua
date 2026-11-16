@@ -1,7 +1,7 @@
 -- ═══════════════════════════════════════════════════════════════════════
---  Senti — free, 100% local speech-to-text (a Wispr Flow clone)
---  Audio is recorded locally, transcribed by a local whisper.cpp server on
---  127.0.0.1, and never leaves this Mac.
+--  Senti — free speech-to-text for macOS. Dictation is 100% local: audio is recorded
+--  locally, transcribed by a local whisper.cpp server on 127.0.0.1, and never leaves
+--  this Mac. The AI modes send text (and a screenshot, if allowed) to the user's provider.
 --
 --  Everything lives on the global `wf` table on purpose: Hammerspoon does NOT
 --  retain hs.eventtap objects, so a file-local tap gets garbage-collected and
@@ -1951,7 +1951,7 @@ end
 function wf.useModel(provider, model)
   local a = wf.active()
   if a.pinned then
-    wf.notify("The model is pinned in config.sh, so the picker cannot change it.", nil, wf.TONE.warn)
+    wf.notify("The model is pinned in config.local.sh, so the picker cannot change it.", nil, wf.TONE.warn)
     return
   end
   local reg = wf.registry or wf.loadRegistry()
@@ -2409,7 +2409,7 @@ local function aiMenu()
   local label = wf.providerLabel(a.provider)
   local items = {
     { title = "Senti writes with: " .. (a.text_model or "no model set") .. " on " .. label
-              .. (a.pinned and ((a.source == "env") and " (pinned in the environment)" or " (pinned in config.sh)") or ""),
+              .. (a.pinned and ((a.source == "env") and " (pinned in the environment)" or " (pinned in config.local.sh)") or ""),
       disabled = true },
     { title = "Written for: " .. (wf.writtenFor() or "detected from the app you prompt into"), disabled = true },
     { title = "-" },
@@ -2428,7 +2428,7 @@ local function aiMenu()
   items[#items + 1] = { title = "Provider", menu = provs }
   local models = {}
   if a.pinned then
-    models[1] = { title = (a.source == "env") and "Pinned in the environment" or "Pinned in config.sh", disabled = true }
+    models[1] = { title = (a.source == "env") and "Pinned in the environment" or "Pinned in config.local.sh", disabled = true }
     models[2] = { title = "-" }
   end
   for _, m in ipairs(wf.modelsFor(reg, a.provider)) do
@@ -2476,11 +2476,11 @@ local function menu()
     { title = "Esc cancels while the pill is showing", disabled = true },
     { title = "-" },
     { title = "Speed", menu = {
-        { title = (curModel == "fast" and "✓ " or "   ") .. (curLang == "en" and "Fast (base.en, ~0.3s)" or "Fast (English only, not used for " .. wf.langName(curLang) .. ")"), fn = function()
+        { title = (curModel == "fast" and "✓ " or "   ") .. (curLang == "en" and "Fast (base.en, English only)" or "Fast (English only, not used for " .. wf.langName(curLang) .. ")"), fn = function()
             wf.notify("Switching to Fast model…")
             hs.task.new(wf.BASH, function() wf.notify("Fast mode on", 2) end, {wf.MODELSH, "fast"}):start()
           end },
-        { title = (curModel == "accurate" and "✓ " or "   ") .. "Accurate (turbo, ~0.8s)", fn = function()
+        { title = (curModel == "accurate" and "✓ " or "   ") .. "Accurate (turbo, the default)", fn = function()
             wf.notify("Switching to Accurate model…")
             hs.task.new(wf.BASH, function() wf.notify("Accurate mode on", 2) end, {wf.MODELSH, "accurate"}):start()
           end },
@@ -2525,7 +2525,7 @@ local function menu()
           end, {wf.DICTATE, "mictest"}):start()
         end, {"--request"}):start()
       end },
-    { title = "Grant screen recording (for ⌃⌥V context)", fn = function()
+    { title = "Grant screen recording (Context, and Prompt screenshots)", fn = function()
         hs.execute("/usr/sbin/screencapture -x -m '" .. wf.SHOT .. "' 2>/dev/null")  -- nudges the prompt
         wf.notify("System Settings ▸ Privacy ▸ Screen Recording →\nenable Hammerspoon, then relaunch it", 5, wf.TONE.warn)
         hs.execute("/usr/bin/open 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'")
@@ -3091,7 +3091,7 @@ h2 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
     var models = p.models || [];
     if (a.pinned) note.textContent = a.pinSource === "env"
       ? "Pinned by SENTI_PROVIDER or SENTI_MODEL in the environment, so the list is read only."
-      : "Pinned in config.sh, so the list is read only. Remove WF_AI_PROVIDER and WF_TEXT_MODEL there to pick here.";
+      : "Pinned in config.local.sh, so the list is read only. Remove WF_AI_PROVIDER and WF_TEXT_MODEL there to pick here.";
     else if (!p.present) note.textContent = "Add a key above to use these models.";
     else note.textContent = "US dollars per 1M tokens" + (S.checked ? ", checked " + S.checked : "") + ". Per prompt is an estimate for 1,500 tokens in and 250 out" + (p.id === "openai" ? "." : ", before thinking tokens.");
     if (!models.length) {

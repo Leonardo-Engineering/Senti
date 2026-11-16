@@ -147,7 +147,9 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 | `senti-brain.sh` | notes → capped digests through ONE gate: Obsidian hub (default), `--retrieve`, `--notion`; `--preview` shows what would be sent |
 | `senti-eval.sh` | eval harness over `eval/cases.txt`; `ab <A> <B>` with a base-vs-base row |
 | `senti-selftest.sh` | the full check suite — run before believing anything works |
-| `senti-model.sh` | Fast/Accurate whisper model switch |
+| `senti-model.sh` | speech model switch (Accurate, Fast, Parakeet) and the language (`lang <code|auto>`) |
+| `senti-config.sh` | installs the shipped `config.sh` and carries user settings into `config.local.sh` |
+| `senti-serve.sh` | the launchd entry point of the warm whisper server |
 | `app/make-icon.sh` | SVG → resvg → iconutil (no Pillow, no Python) |
 | `tools/models-watch.py` (repo only) | weekly check (GitHub Action `models-watch.yml`): registry and `prompts/models` against OpenRouter's public list; opens an issue, edits nothing. Update procedure: CONTRIBUTING.md, "Keeping the model knowledge current" |
 | `uninstall.sh` (repo only) | asks, then removes the LaunchAgent, restores `init.lua`, removes app, cache, logs; asks again for keys and models |
@@ -454,4 +456,3 @@ hold-to-talk feels dead, check `wf.diag()` for the eventtap first.
 - User-facing: `README.md`. Go-to-market, pricing, and roadmap are deliberately NOT in
   this repo — they live in the private vault (`Efforts/Active/Senti/`). If you find
   yourself writing strategy here, that's the signal it belongs there instead.
-- Claude memory: `whisper-flow-local-dictation-2026-07-03.md` (has the full audited state).
