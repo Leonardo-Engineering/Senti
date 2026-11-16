@@ -146,6 +146,18 @@ rm -rf "$HOME/.cache/senti"
 rm -f "$HOME/Library/Logs/senti.log" "$HOME/Library/Logs/senti-server.log"
 echo "✓ removed Senti.app, ~/.cache/senti and the logs"
 
+# 3b. Senti told Hammerspoon to hide its Dock and menu bar icons and to open at login. Put the
+# icons back (a read-back proves it). The login item is Hammerspoon's own setting: say where it is.
+if /usr/bin/defaults read org.hammerspoon.Hammerspoon MJShowMenuIconKey >/dev/null 2>&1; then
+  /usr/bin/defaults write org.hammerspoon.Hammerspoon MJShowDockIconKey -bool true
+  /usr/bin/defaults write org.hammerspoon.Hammerspoon MJShowMenuIconKey -bool true
+  if [ "$(/usr/bin/defaults read org.hammerspoon.Hammerspoon MJShowMenuIconKey 2>/dev/null)" = 1 ]; then
+    echo "✓ Hammerspoon's Dock and menu bar icons are back on (they show after it restarts)"
+  fi
+fi
+echo "  Hammerspoon still opens at login. To stop that: open Hammerspoon, Preferences,"
+echo "  and untick 'Launch Hammerspoon at login' (or remove it in System Settings, Login Items)."
+
 # 4. Settings and keys: asked separately, kept by default.
 if [ -d "$CFG" ]; then
   if confirm_extra "Also remove your settings, API keys and Notion token (~/.config/senti and the io.senti Keychain items)?"; then

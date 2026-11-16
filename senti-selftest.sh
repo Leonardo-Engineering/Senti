@@ -604,8 +604,10 @@ haiku-generator — zsh
 Mistral wind - Wikipedia
 Llama farm visit
 Gemini (constellation) - Wikipedia
+codex-notes — vim
+claude.md — vim
 TITLES
-[ -z "$THIJ" ] && ok "ordinary words in a window title do not name a model family (11 titles probed)" || bad "window titles mistaken for a model:$THIJ"
+[ -z "$THIJ" ] && ok "ordinary words in a window title do not name a model family (13 titles probed)" || bad "window titles mistaken for a model:$THIJ"
 # Models in one family are prompted differently, so an app resolves to the model it runs (the KB's
 # "app:" lines), and Codex to the model its own config names.
 tgt_for() { SENTI_SLABEL="${2:-}" bash "$CFG/senti-target.sh" "$1" 2>/dev/null; }
@@ -1156,7 +1158,7 @@ O5="$(say_as en 'Short words.')";                    TS2="$(/usr/bin/grep -c '^n
 # Parakeet (optional engine): a stand-in CLI and model. Default off; on only when picked AND
 # present AND the language is one it knows; a failure falls back to the whisper request.
 FPK="$HOME/.cache/senti/fakeparakeet"; FPM="$HOME/.cache/senti/fake-parakeet.bin"; : > "$FPM"
-printf '#!/bin/bash\n[ -n "${PK_FAIL:-}" ] && exit 3\nprintf "%%s\\n" "$@" > "%s.pk"\necho "from parakeet"\n' "$CARGS" > "$FPK"; /bin/chmod 700 "$FPK"
+printf '#!/bin/bash\n[ -n "${PK_FAIL:-}" ] && exit 3\n[ -n "${PK_HANG:-}" ] && exec /bin/sleep 60\nprintf "%%s\\n" "$@" > "%s.pk"\necho "from parakeet"\n' "$CARGS" > "$FPK"; /bin/chmod 700 "$FPK"
 eng_of() { ( unset WF_ENGINE WF_LANG WF_MODEL; WF_PARAKEET_CLI="$FPK"; WF_PARAKEET_MODEL="$1"; . "$CFG/config.sh"; printf %s "$WF_ENGINE" ); }
 MPOLD2="$(/bin/cat "$MP" 2>/dev/null || true)"; /bin/rm -f "$LP"
 /bin/rm -f "$MP"; E0="$(eng_of "$FPM")"; echo parakeet > "$MP"; E1="$(eng_of "$FPM")"; E2="$(eng_of "$HOME/none.bin")"; echo ja > "$LP"; E3="$(eng_of "$FPM")"; /bin/rm -f "$LP"
@@ -1170,6 +1172,9 @@ P2="$(PK_FAIL=1 pk_say)"
 P3="$(FAKE_LEN=45.000000 pk_say)"
 [ "$P3" = "From whisper" ] && ok "with Parakeet on, a clip of 30 s or more still goes to whisper" || bad "long clip with Parakeet on gave '$P3'"
 [ "$P2" = "From whisper" ] && ok "when parakeet-cli fails the same clip is transcribed by whisper" || bad "parakeet failure gave '$P2'"
+PH0=$(/bin/date +%s); P4="$(PK_HANG=1 WF_PARAKEET_TIMEOUT=1 pk_say)"; PH1=$(/bin/date +%s)
+[ "$P4" = "From whisper" ] && [ $((PH1 - PH0)) -lt 20 ] && ok "a hung parakeet-cli is cut off and the clip goes to whisper" || bad "hung parakeet-cli: '$P4' after $((PH1 - PH0)) s"
+/usr/bin/grep -q 'WF_PARAKEET_TIMEOUT:-10' "$CFG/senti-dictate.sh" && ok "the Parakeet time limit defaults to 10 s (fallback stays inside the app's 75 s limit)" || bad "Parakeet time limit default changed"
 PKA="$(/bin/cat "$CARGS.pk" 2>/dev/null | /usr/bin/tr '\n' ' ')"
 case "$PKA" in *"-f $HOME/.cache/senti/capture.wav"*) ok "parakeet-cli receives the audio path and nothing else of the user's" ;; *) bad "parakeet-cli arguments: $PKA" ;; esac
 if [ -n "$MPOLD2" ]; then echo "$MPOLD2" > "$MP"; else /bin/rm -f "$MP"; fi
@@ -1294,13 +1299,24 @@ case "$XREC" in *alpha-turn-7Q*) bad "session recall returned another project's 
   *beta-turn-7Q*) ok "session recall returns only this project's turns" ;;
   *) bad "session recall lost this project's own turn" ;; esac
 rm -f "$HOME/.cache/senti/sessions/900007.tsv" 2>/dev/null
+# An empty tagged answer ("delete this") must never be pasted as the literal tags.
+EA="$(mktemp -d)"; mkdir -p "$EA/.config" "$EA/.cache/senti" "$EA/Library/Logs"; /bin/cp -R "$CFG" "$EA/.config/senti"
+printf '#!/bin/bash\nprintf "%%s" "$FAKE_OUT"\n' > "$EA/.config/senti/senti-ai.sh"; printf 'some selected text' > "$EA/sel.txt"
+EC1="$(HOME="$EA" FAKE_OUT='<r></r>' SENTI_IN="delete this" bash "$EA/.config/senti/senti-command.sh" "$EA/sel.txt" 2>/dev/null)"; EC1R=$?
+EC2="$(HOME="$EA" FAKE_OUT='<r>short text</r>' SENTI_IN="shorten" bash "$EA/.config/senti/senti-command.sh" "$EA/sel.txt" 2>/dev/null)"
+EC3="$(HOME="$EA" FAKE_OUT='plain answer' SENTI_IN="shorten" bash "$EA/.config/senti/senti-command.sh" "$EA/sel.txt" 2>/dev/null)"
+EP1="$(HOME="$EA" FAKE_OUT='<r></r>' SENTI_IN="my idea words" bash "$EA/.config/senti/senti-prompt.sh" 2>/dev/null)"
+if [ -z "$EC1" ] && [ "$EC1R" = 3 ] && [ "$EC2" = "short text" ] && [ "$EC3" = "plain answer" ] && [ "$EP1" = "my idea words" ]; then
+  ok "an empty tagged answer is never pasted as tags (Command: empty answer; Prompt: your words)"
+else bad "empty tagged answer: command '$EC1' rc=$EC1R, tagged '$EC2', untagged '$EC3', prompt '$EP1'"; fi
+/bin/rm -rf "$EA"
 # A project picks its own note: exact name first, whole words only, never a mere substring.
 NV="$(mktemp -d)"; for d in App Essentials "Senti Site" Senti; do mkdir -p "$NV/Work/$d"; printf '## Senti\nNOTE-OF-%s\n' "$d" > "$NV/Work/$d/$d.md"; done
 nm() { WF_BRAIN=1 WF_VAULT="$NV" WF_BRAIN_DIRS="Work" SENTI_SLABEL="$1 — x — claude" bash "$CFG/senti-brain.sh" 2>/dev/null | /usr/bin/grep -o 'NOTE-OF-.*' | head -1; }
-NM1="$(nm senti)"; NM2="$(nm davincibets_app)"; NM3="$(nm senti-site)"
+NM1="$(nm senti)"; NM2="$(nm acme_app)"; NM3="$(nm senti-site)"
 if [ "$NM1" = "NOTE-OF-Senti" ] && [ -z "$NM2" ] && [ "$NM3" = "NOTE-OF-Senti Site" ]; then
   ok "a project picks its own vault note (exact name first, whole words, no substring matches)"
-else bad "vault note matching: senti→'$NM1' davincibets_app→'$NM2' senti-site→'$NM3'"; fi
+else bad "vault note matching: senti→'$NM1' acme_app→'$NM2' senti-site→'$NM3'"; fi
 rm -rf "$NV"
 SENTI_IN="verbatim-canary-7Q" SENTI_SKEY="900004" bash "$SS" note "" "" verbatim >/dev/null 2>&1
 VREC="$(SENTI_SKEY="900004" SENTI_SLABEL="proj — x" bash "$SS" recall 2>/dev/null)"

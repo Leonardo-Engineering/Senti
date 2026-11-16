@@ -2537,10 +2537,12 @@ local function menu()
     { title = "-" },
     { title = "Speed", menu = {
         { title = (curModel == "fast" and "✓ " or "   ") .. (curLang == "en" and "Fast (base.en, English only)" or "Fast (English only, not used for " .. wf.langName(curLang) .. ")"), fn = function()
+            if wf.engineBusy() then return end
             wf.notify("Switching to Fast model…")
             hs.task.new(wf.BASH, function() wf.notify("Fast mode on", 2) end, {wf.MODELSH, "fast"}):start()
           end },
         { title = (curModel == "accurate" and "✓ " or "   ") .. "Accurate (turbo, the default)", fn = function()
+            if wf.engineBusy() then return end
             wf.notify("Switching to Accurate model…")
             hs.task.new(wf.BASH, function() wf.notify("Accurate mode on", 2) end, {wf.MODELSH, "accurate"}):start()
           end },
@@ -2548,6 +2550,7 @@ local function menu()
           local has = hs.execute(wf.BASH .. " '" .. wf.MODELSH .. "' has-parakeet"):gsub("%s+", "") == "yes"
           if not has then return { title = "   Parakeet (optional download, see the README)", disabled = true } end
           return { title = (curModel == "parakeet" and "✓ " or "   ") .. "Parakeet (~0.4s, no vocabulary hint)", fn = function()
+            if wf.engineBusy() then return end
             wf.notify("Switching to Parakeet…")
             hs.task.new(wf.BASH, function(rc) wf.notify(rc == 0 and "Parakeet on. Whisper stays loaded as the fallback." or "Parakeet is not available.", 4) end, {wf.MODELSH, "parakeet"}):start()
           end }
@@ -2612,6 +2615,7 @@ local function menu()
     end)(),
     { title = "-" },
     { title = "Restart engine", fn = function()
+        if wf.engineBusy() then return end
         hs.execute("/bin/launchctl kickstart -k gui/$(id -u)/io.senti.server")
         wf.notify("Whisper engine restarting…")
       end },
@@ -2635,6 +2639,14 @@ function wf.sideKeyStillDown(e, code)
     return (math.tointeger(e:getRawEventData().CGEventData.flags) & bit) ~= 0
   end)
   return ok and down == true
+end
+
+-- Switching the speech model or restarting the engine reloads the server. During a recording or a
+-- working turn that fails the transcription in flight and the words are lost, so refuse until idle.
+function wf.engineBusy()
+  if wf.state == "idle" then return false end
+  wf.notify("Senti is busy.\nChange the engine when this one finishes.", 3)
+  return true
 end
 
 -- A hold key pressed while the last turn is still working used to do nothing at all: no recording,

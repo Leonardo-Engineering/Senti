@@ -231,7 +231,10 @@ EOF
   case "${dur%%.*}" in ''|*[!0-9]*) plong=1 ;; *) [ "${dur%%.*}" -ge 30 ] && plong=1 ;; esac
   if [ "${WF_ENGINE:-whisper}" = "parakeet" ] && [ "$plong" = 0 ]; then
     local praw prc
-    praw="$(/usr/bin/perl -e 'alarm shift; exec @ARGV' 30 "$WF_PARAKEET_CLI" -m "$WF_PARAKEET_MODEL" -t 6 -np -f "$WF_AUDIO" 2>/dev/null)"
+    # 10 s, not 30: a hung parakeet-cli plus the whisper fallback's own budget (up to 44 s) used
+    # to add up to about 76 s, past the app's 75 s limit, so the text arrived to an abandoned turn.
+    local pto="${WF_PARAKEET_TIMEOUT:-10}"; case "$pto" in ''|*[!0-9]*) pto=10 ;; esac
+    praw="$(/usr/bin/perl -e 'alarm shift; exec @ARGV' "$pto" "$WF_PARAKEET_CLI" -m "$WF_PARAKEET_MODEL" -t 6 -np -f "$WF_AUDIO" 2>/dev/null)"
     prc=$?
     if [ "$prc" -eq 0 ] && [ -n "${praw//[[:space:]]/}" ]; then
       log "engine: parakeet (${dur:-?}s clip)"

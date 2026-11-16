@@ -173,7 +173,10 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
   `.claude/tmp/team/audit3-*-report.md` and `scratch/audit3-*/`. Rules that came out of it: `wf.titleHead`
   strips spinner glyphs and unread counts before the focus comparison; `wf.runCommand` hands back when focus
   moved BEFORE it reads a selection; a pinned model drives both kinds even with the provider pinned; text cut
-  by bytes must drop a split UTF-8 character; `stop` waits up to 0.5 s for `start`'s pidfile. Known and left:
+  by bytes must drop a split UTF-8 character; `stop` waits up to 0.5 s for `start`'s pidfile. Known and left (traced, not reproducible without real hardware or a locked keychain): a locked login
+  keychain on the auto tier costs up to 4 alarms of 5 s and ends as exit 10, not 19; a sox that needs SIGKILL
+  leaves an unfinished WAV that can be gated as a tap; a muted output device that disconnects mid-turn can come
+  back muted; with 2 keyboards `watchHold` may read the other one's flags. Also left:
   a hold key pressed while working is not queued (it is announced, and the finished result waits 2 s for the
   key to come up).
 - **Paste (Phase 2):** everything pastes through `wf.deliver` (see the header comment there). First real
