@@ -160,6 +160,8 @@ if [ -d "$CFG" ]; then
       echo "  ! senti-key.sh is missing, so the Keychain items were not checked"
     fi
     rm -rf "$CFG"
+    # senti-key.sh sources config.sh (which creates the cache folder) and logs each clear
+    rm -rf "$HOME/.cache/senti"; rm -f "$HOME/Library/Logs/senti.log"
     if [ -z "$KC_LEFT" ]; then
       echo "✓ removed ~/.config/senti and Senti's Keychain items"
     else

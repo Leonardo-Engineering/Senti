@@ -1077,6 +1077,17 @@ if [ "$CI" = 1 ]; then
   /usr/bin/grep -q 'function wf.earlyStart' "$SRC/senti.lua" && /usr/bin/grep -q 'first audio block %d ms after key-down' "$SRC/senti.lua" \
     && ok "senti.lua starts the recorder first at key-down and logs the time to first audio" || bad "senti.lua lacks the early recorder start or the first-audio log"
 fi
+echo "── audit of 15 Nov 2026: regressions ──"
+PV2="$(WF_AI_PROVIDER=anthropic WF_TEXT_MODEL=claude-sonnet-5-5 bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-key.sh"; senti_ai_resolve vision; printf "%s %s" "$SENTI_R_PROVIDER" "$SENTI_R_MODEL"')"
+[ "$PV2" = "anthropic claude-sonnet-5-5" ] && ok "a pinned provider plus a pinned text model sends screenshots to that model, not the provider's default" || bad "provider+model pin, vision resolved to '$PV2'"
+printf 'WF_LANG=pt-BR\n' > "$CFG/config.local.sh"
+LV="$(bash -c 'unset WF_LANG; . "$0/config.sh"; printf %s "$WF_LANG"' "$CFG")"; /bin/rm -f "$CFG/config.local.sh"
+[ "$LV" = "en" ] && ok "a language whisper does not know in config.local.sh falls back to English (the server would not start with it)" || bad "config.local.sh WF_LANG=pt-BR gave '$LV'"
+AUD="$(printf 'centi|Senti\n' > "$HOME/.cache/senti/ct-rules.txt"; WF_REPLACEMENTS="$HOME/.cache/senti/ct-rules.txt" bash -c 'eval "$(/usr/bin/sed -n "/^clean_text()/,/^}/p" "$0")"; printf "%s|%s|%s" "$(clean_text "Is that the right file, um?")" "$(clean_text "That is great, uh!")" "$(WF_LANG=fr clean_text "Au centième essai.")"' "$CFG/senti-dictate.sh" 2>/dev/null)"; /bin/rm -f "$HOME/.cache/senti/ct-rules.txt"
+[ "$AUD" = "Is that the right file?|That is great!|Au centième essai." ] && ok "a dropped filler hands back its ? or !, and a dictionary rule does not fire inside an accented word" || bad "clean_text audit cases gave '$AUD'"
+SUT="$(SENTI_IN="$(/usr/bin/perl -e 'print "x" x 198, "\xe2\x80\x99tail"')" bash "$CFG/senti-session.sh" note "aud$$" "proj — t" prompt >/dev/null 2>&1; /bin/cat "$HOME"/.cache/senti/sessions/*aud$$* 2>/dev/null | /usr/bin/tail -1 | /usr/bin/cut -f3 | /usr/bin/perl -ne 'chomp; print((utf8::decode(my $c = $_)) ? "valid" : "broken")')"
+[ "$SUT" = "valid" ] && ok "a session turn cut at 200 bytes never ends in half a character" || bad "session note cut a multi-byte character ('$SUT')"
+/bin/rm -f "$HOME"/.cache/senti/sessions/*aud$$*
 echo "── language ──"
 LP="$HOME/.cache/senti/lang.pref"; /bin/rm -f "$LP"
 lang_of() { ( unset WF_LANG WF_MODEL; . "$CFG/config.sh"; printf '%s|%s' "$WF_LANG" "${WF_MODEL##*/}" ); }

@@ -340,7 +340,7 @@ clean_text() {
         my $tok = $w[$i]; my $base = lc $tok; my $p = "";
         $p = $1 if $base =~ /([.,!?;:]+)$/; $base =~ s/[.,!?;:]+$//;
         if ($en ? $base =~ /^(um+|uh+|uhm+|erm+|hmm+)$/ : $base =~ /^(uh+|uhm+|erm+|hmm+)$/) {
-          if ($p =~ /\./ && $out ne "" && $out !~ /[.!?]$/) { $out =~ s/[,;:]+$//; $out .= "."; }
+          if ($p =~ /([.?!])/ && $out ne "" && $out !~ /[.!?]$/) { my $e = $1; $out =~ s/[,;:]+$//; $out .= $e; }
           next;
         }
         next if $en && $i == 0 && $n > 2 && $p eq "," && $base =~ /^(so|okay|ok|well|like)$/;
@@ -355,7 +355,7 @@ clean_text() {
         my ($p, $r) = split(/\|/, $_, 2); s/^\s+|\s+$//g for $p, $r;
         next if $p eq "";   # an empty pattern re-uses the last match in perl
         push @rules, [$p, $r]; }
-      for my $ru (@rules) { my ($p, $r) = @$ru; $t =~ s/(?<![[:alnum:]-])\Q$p\E(?![[:alnum:]-])/$r/gi; }   # "-" is part of a word: no rule fires inside "centi-meter"
+      for my $ru (@rules) { my ($p, $r) = @$ru; $t =~ s/(?<![[:alnum:]\x80-\xff-])\Q$p\E(?![[:alnum:]\x80-\xff-])/$r/gi; }   # "-" is part of a word: no rule fires inside "centi-meter"
     }
     print $t;' "$WF_REPLACEMENTS"
 }
@@ -383,7 +383,14 @@ stop() {
       log "stop: tail $tail_ms ms"
     fi
   fi
-  finish_recording || { { /bin/sleep 1; reap_orphans; } >/dev/null 2>&1 & }
+  # Nothing to stop usually means key-up beat key-down: senti.lua spawned start first, and it has
+  # not written its pidfile yet. Wait up to half a second for it and stop that recorder. (The
+  # detached reap that used to cover this skipped the very process the pidfile names.)
+  if ! finish_recording; then
+    local w=0
+    while [ "$w" -lt 25 ] && [ ! -s "$WF_PIDFILE" ]; do /bin/sleep 0.02; w=$((w + 1)); done
+    finish_recording || { { /bin/sleep 1; reap_orphans; } >/dev/null 2>&1 & }
+  fi
   cue "$WF_SOUND_STOP"
   local text; text="$(transcribe)"
   # Don't archive the transcript. senti.log is never rotated, so logging the text made

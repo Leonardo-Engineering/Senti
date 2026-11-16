@@ -18,7 +18,7 @@ case "${1:-current}" in
   parakeet)
     [ -f "$WF_PARAKEET_MODEL" ] && [ -x "$WF_PARAKEET_CLI" ] || { echo "parakeet: the model file or parakeet-cli is missing (see the README)" >&2; exit 1; }
     echo parakeet > "$WF_MODEL_PREF" ;;
-  current)  case "$(cat "$WF_MODEL_PREF" 2>/dev/null)" in fast) echo fast;; parakeet) [ -f "$WF_PARAKEET_MODEL" ] && [ -x "$WF_PARAKEET_CLI" ] && echo parakeet || echo accurate;; *) echo accurate;; esac; exit 0 ;;
+  current)  case "$(cat "$WF_MODEL_PREF" 2>/dev/null)" in fast) echo fast;; parakeet) [ "${WF_ENGINE:-whisper}" = parakeet ] && echo parakeet || echo accurate;; *) echo accurate;; esac; exit 0 ;;
   has-parakeet) [ -f "$WF_PARAKEET_MODEL" ] && [ -x "$WF_PARAKEET_CLI" ] && echo yes || echo no; exit 0 ;;
   lang)
     case "${2:-current}" in

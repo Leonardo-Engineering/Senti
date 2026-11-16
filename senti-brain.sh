@@ -118,6 +118,8 @@ sub digest {
   my @o = split /\n/, $d, -1;
   for (@o) { s/\[\[[^\]|]*\|([^\]]*)\]\]/$1/g; s/\[\[([^\]]*)\]\]/$1/g; $_ = substr($_, 0, 100000); }
   $d = substr(join("\n", @o), 0, $max);
+  # the cut is in bytes: drop a UTF-8 character it split, or the request carries a broken byte
+  $d =~ s/([\xC0-\xFF][\x80-\xBF]*)\z/my $s = $1; my $n = ord($s) >= 0xF0 ? 4 : ord($s) >= 0xE0 ? 3 : 2; length($s) == $n ? $s : ""/e;
   $d =~ s/\n+\z//;
   return $d;
 }
@@ -246,10 +248,11 @@ EOF
   # (People/ notes, or ../ out of the vault entirely). Notion entries are not vault paths
   # and are skipped here, before the allowlist check (which would log them).
   if [ -f "$MAP" ]; then
-    while IFS='|' read -r k v; do
+    while IFS='|' read -r k v || [ -n "$k" ]; do
       case "$k" in ''|\#*) continue ;; esac
       [ -n "$v" ] || continue          # no "|": not a vault entry ("project = notion:..." lines)
-      case "$(trim "$v")" in notion:*) continue ;; esac
+      k="$(trim "$k")"; v="$(trim "$v")"
+      case "$v" in notion:*) continue ;; esac
       in_allowlist "$v" || { ignored "map entry for '$k'"; continue; }
       if key_matches "$k"; then
         { [ -f "$VAULT/$v" ] || [ -L "$VAULT/$v" ]; } || continue

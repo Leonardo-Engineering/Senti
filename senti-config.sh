@@ -43,6 +43,14 @@ if [ ! -f "$LOCAL" ]; then
 fi
 
 HAVE="$(ver "$CUR")"; case "$HAVE" in ''|*[!0-9]*) HAVE=0 ;; esac
-cp "$CUR" "$CFG/config.sh.v$HAVE.bak"
-cp "$NEW" "$CUR"
-echo "  ✓ config.sh updated (the previous one is config.sh.v$HAVE.bak); your settings stay in config.local.sh"
+# The backup name carries the schema version, and the shipped file changes without a version
+# bump, so an existing backup (possibly the user's own hand-edited file) is never overwritten.
+BAK="$CFG/config.sh.v$HAVE.bak"
+if /usr/bin/cmp -s "$CUR" "$NEW"; then
+  echo "  ✓ config.sh is already current; your settings stay in config.local.sh"
+else
+  if [ -e "$BAK" ] && ! /usr/bin/cmp -s "$CUR" "$BAK"; then BAK="$CFG/config.sh.v$HAVE.$(date '+%Y%m%d-%H%M%S').bak"; fi
+  cp "$CUR" "$BAK"
+  cp "$NEW" "$CUR"
+  echo "  ✓ config.sh updated (the previous one is $(basename "$BAK")); your settings stay in config.local.sh"
+fi
