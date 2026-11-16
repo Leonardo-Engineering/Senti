@@ -168,7 +168,8 @@ whisper-cpp already installs. Measured on one M-series Mac, key-up to text: a 4 
 seconds against 0.50 for the default model, a 13 second clip 0.50 against 0.58, and a 21 second clip
 0.62 against 1.09. The gain is mostly on dictations longer than 14 seconds. It knows 25 European languages and takes no vocabulary hint, so
 project names lean on your `replacements.txt`. Download the model (669 MB), check it, then pick
-Speed, then Parakeet in the menu bar. If Parakeet fails on a clip, Senti uses the default model for it.
+Speed, then Parakeet in the menu bar. Senti uses Parakeet for dictations under 30 seconds and the default model for longer ones and whenever
+Parakeet fails. On real recorded speech the two were close in accuracy; the default model stays the default.
 
 ```bash
 curl -L -o ~/.local/share/whisper-models/ggml-parakeet-tdt-0.6b-v3-q8_0.bin \

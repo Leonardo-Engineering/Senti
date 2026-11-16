@@ -34,7 +34,10 @@ screenshot — to cheap cloud APIs.
   garbled the second half of 1 of 8 clips over 30 s, so `senti-dictate.sh` uses it only below 30 s.
 - **Long clips need timestamps (load-bearing).** The server runs `--no-timestamps`; on clips over 30 s that
   made whisper skip whole sentences at each window boundary (34 s clip: 58 of 119 words; 92 s: 212 of 244).
-  `senti-dictate.sh` sends `no_timestamps=false` from 25 s up (119 and 242 words; +0.1 to 0.2 s). Never
+  `senti-dictate.sh` sends `no_timestamps=false` from 25 s up (119 and 242 words; +0.1 to 0.2 s). Over all 14
+  recordings of 25 s or more: WER 11.8% before, 3.2% after; recordings losing 5 or more words 5 before, 0
+  after. Pauses of 5 and 10 s between two utterances (17 to 40 s total, installed path): no extra errors, no
+  noise tags inside the text. Never
   remove it, and never judge long-clip behaviour from synthetic voices: 57 s of TTS showed no loss at all.
   Long clips (TTS, 15 Nov 2026): 57 s of non-repeating speech, both engines 188 of 188 words. The same
   paragraph spoken 4 times in a row (85 s): Parakeet 274 of 274, whisper 191 of 274 (it drops repeated
