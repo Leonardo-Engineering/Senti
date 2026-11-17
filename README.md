@@ -55,8 +55,10 @@ have typed if you had taken the time.
   and not to guess. In the tests 8 of the 10 rewrites of vague ideas got one.
 - **It writes the same way for every app.** Senti used to add notes on the destination model to the
   rewriter's instructions. Leaving them out had no measured effect either way on 60 test ideas (round
-  r6, 17 November 2026, 2 samples each, `gpt-6-luna`, M3 Pro; the held-back ideas, the screenshot path
-  and long dictations were not rerun without them). They are off for privacy and size: Senti no longer
+  r6, 17 November 2026, 2 samples each, `gpt-6-luna`, M3 Pro), nor in a safety check the same evening on
+  all 75 ideas, the screenshot path and the 15 long dictations: additions 2 against 3 of 150, said items
+  lost 2 against 4 of 778, answers head to head 13 better, 22 worse, 40 tied (not a result; p 0.18), and
+  nothing lost on the long dictations read by hand. They are off for privacy and size: Senti no longer
   reads Claude Code's session file or Codex's config, and its instructions are 0.8 to 3.4 KB shorter.
   The other numbers on this page were measured with the notes on. The notes (`prompts/models/*.md`, a
   section per model, 20 in all, written from each lab's own pages) stay in the repo, and a weekly check

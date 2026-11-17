@@ -248,8 +248,13 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 - **Per-model notes (OFF by default since 17 Nov 2026; `WF_TARGET_NOTES=1` turns them on):** round r6 (notes
   left out, 60 tuning cases, 2 samples, text path, gpt-6-luna, M3 Pro) moved no measure at p < 0.05 (additions
   1-0-59, answers 8-3-49 p 0.23, pairwise 11-16-33 p 0.44; pre-registered as "not kept", since nothing
-  improved). Shipped off for privacy and size, never cite it as an improvement; holdout, screenshot path, long
-  clips and the installed path were not rerun. Off, `senti_build_craft` does not run `senti-target.sh`, so no
+  improved). Shipped off for privacy and size, never cite it as an improvement. Safety check on branch
+  `pm-notes-off` (arm r7, 17 Nov 2026, all 75 cases, screenshot path, 15 long): nothing worse at p < 0.05;
+  additions 2 vs 3 of 150, lost 2 vs 4 of 778, pairwise 13-22-40 (p 0.18), screenshot additions 0 vs 1, long 0
+  of 444 lost by hand. Pairwise leans to the notes-on arm in every reading (13-22, holdout 2-7, r6 11-16), none
+  significant: say "no measured effect at 75 cases". Text path 1.28 vs 1.61 s median in the harness,
+  alternated, 17 of 20 faster (the installed app's key-down prefetch hides part of that). Tokens without the
+  notes: text 1,694 in / 39 out, screenshot mean 4,597 / 63. Record in `eval/runs/prereg.md`. Off, `senti_build_craft` does not run `senti-target.sh`, so no
   Claude Code transcript or Codex config is read and `last-request.json` has no `target_digest`; the menu's
   "Written for" row then says "any app". `target.pref` and `WF_MODEL_KB` do nothing while off. The craft cache
   is not keyed on the switch, but ctx- files are swept after every turn, so a toggle applies from the next turn. On, `senti-target.sh` maps the frontmost app (free, local, no
