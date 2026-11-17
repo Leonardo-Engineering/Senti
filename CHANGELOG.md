@@ -69,9 +69,9 @@ All notable changes to Senti. Dates are in US Eastern time.
 ### Added
 
 - `eval/cases-long.jsonl` (repo only): 15 long dictations of 228 to 278 words for the Prompt mode eval.
-  On them (17 Nov 2026, 2 samples each) Prompt mode lost 4 of 444 said items in code, all honest
-  rewordings by hand, against 37 of 444 for 1.1.1, and its answers were level with pasting the
-  transcript (4 better, 6 worse, 5 tied). README, "Long dictation", has the rest.
+  On them (17 Nov 2026, 2 samples each, lost items read by hand) Prompt mode lost 0 of 444 said items
+  and 1.1.1 lost 15; the answers are no result at 15 ideas (against the transcript 4 better, 6 worse,
+  5 tied). README, "Long dictation", has the rest.
 - `tools/prompt-eval.py` and `eval/cases2.jsonl` (repo only): an eval for Prompt mode that checks in
   code whether what was said is still present, judges additions against the speech, and scores a
   stand-in destination's answer against the speaker's written intent. It catches planted defects (an

@@ -196,16 +196,19 @@ What this shows, and what it does not:
   and Hawaii, and when the package is over 20 pounds", which turns the second exclusion around, and the
   judge that checks meaning passed it. Whether a relevant screen helps was not measured.
 - **Long dictation.** The 75 ideas are 8 to 50 words, so 15 more were written of 228 to 278 words each,
-  with digressions, self-corrections and withdrawn ideas (17 November 2026, 2 samples each, same
-  model). This version lost 4 of 444 said items as counted in code, and all 4 are honest rewordings
-  read by hand; 3 of its 30 rewrites dropped something the count does not cover, 1 of them a
-  prohibition ("don't include medical details"). It was judged to add something in 1 of 30 (4 of 30
-  when the same version was run again; 5 of 30 read by hand, all small: "apartment", a guessed
-  `waitUntil`). 1.1.1 lost 37 of 444 and added something in 29 of 30; this version lost fewer in 11
-  ideas and more in 1. Every withdrawn value and misheard name was handled; on the transcript itself 15
-  of the 16 checks for them fired. The answers were level: against the transcript 4 better, 6 worse, 5 tied, against
-  1.1.1 7, 3, 5, and the same version against itself 1, 6, 8. On long dictation it keeps what you said;
-  it does not get a better answer than pasting the transcript.
+  with digressions, self-corrections and withdrawn ideas (17 November 2026, 2 samples each, same model;
+  the rules for reading the result were written down before the run). Said items lost, counted in code
+  and then read by hand: this version 0 of 444, 1.1.1 15 of 444, in 8 of its 30 rewrites (one dropped
+  both requests of an email, another the topic of a lesson plan); this version lost fewer in 6 ideas
+  and more in none (sign test p 0.031). The code first counted 4 and 37: rewordings such as "confirm
+  its decision in writing" were then accepted for every rewriter. Only this version's 30 rewrites were
+  also read in full: 3 dropped something outside the list, 1 of them a prohibition ("don't include
+  medical details"). It was judged to add something in 1 of 30, and in 4 of 30 when the same version
+  was run again; read by hand 5 of 30, all small ("apartment", a guessed `waitUntil`), 7 if a
+  carried-over unit counts ("$" on amounts said without "dollars"). Every withdrawn value and misheard
+  name was handled; on the transcript itself 15 of the 16 checks for them fired. The answers are no
+  result at 15 ideas: against the transcript 4 better, 6 worse, 5 tied (leaning to the transcript),
+  against 1.1.1 7, 3, 5, and the same version against itself 1, 6, 8.
 
 ## Modes
 
@@ -598,7 +601,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 - `senti-prompt.sh`: Prompt mode without a screenshot.
 - `senti-vision.sh`: Context, and Prompt with a screenshot.
 - `senti-command.sh`: transforms selected text.
-- `tools/prompt-eval.py` with `eval/cases2.jsonl` (repo only): measures Prompt mode. See CONTRIBUTING.md.
+- `tools/prompt-eval.py` with `eval/cases2.jsonl` and `eval/cases-long.jsonl` (repo only): measures Prompt mode. See CONTRIBUTING.md.
 - `senti-judge.sh` / `senti-eval.sh`: the older prompt judge and harness, kept for their history.
 - `senti-selftest.sh`: the check suite. `--ci` runs it offline from a checkout.
 - `senti-model.sh`: switches the speech model (Accurate, Fast, Parakeet) and the language.
