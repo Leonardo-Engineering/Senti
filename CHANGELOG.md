@@ -6,10 +6,10 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ### Changed
 
-- Prompt mode now writes what you said and is told to add nothing. It cleans the speech, writes spoken numbers,
-  paths and names in their normal form, keeps your order, your conditions and prohibitions, your
-  hedges ("maybe", "about") and your commitments ("I'll"), and leaves only the final value of a
-  self-correction. An already clear prompt comes back as you said it. When the idea names no result
+- Prompt mode now writes what you said and is told to add nothing. It is told to clean the speech, write
+  spoken numbers, paths and names in their normal form, keep your order, your conditions and
+  prohibitions, your hedges ("maybe", "about") and your commitments ("I'll"), and leave only the final
+  value of a self-correction (what it still gets wrong is listed below). An already clear prompt comes back as you said it. When the idea names no result
   or no target at all, it is told to end with an `Open questions:` line that states what was not said,
   and not to guess (8 of the 10 rewrites of vague ideas got one). Words you address to Senti about the prompt ("ask it for 2 versions") are
   followed, not copied. Before, the 3 worked examples in `prompts/prompt-craft.md` each invented
@@ -31,7 +31,8 @@ All notable changes to Senti. Dates are in US Eastern time.
   were scored for 3 earlier revisions too, and 1 of them no longer counts as unseen (see the README).
 - Expect much the same prompt whichever app is in front. The per-model notes still reach the
   rewriter, introduced as guidance to apply, and in the tests the new rules won: an earlier revision
-  copied a line such as "keep the changes in scope" into 1 of 144 rewrites for coding agents, and of 3
+  added a scope line that the notes recommend ("Keep the changes in scope to these four steps") to 1 of
+  144 rewrites for coding agents, and of 3
   ideas tried for Claude Code, ChatGPT and Codex with an earlier revision on 16 Nov 2026, 2 gave the
   same text for all 3 and 1 differed by 2 words. A version that shaped the prompt per destination
   (plain sentences for Claude Code, word labels for Codex, a placeholder for pasted material) was
@@ -42,7 +43,8 @@ All notable changes to Senti. Dates are in US Eastern time.
   on the same 75 ideas, rewrites that added something went from 148 of 150 to 1 of 150 (16 and 17 Nov
   2026), and nothing from the screenshot got into this version's prompts. That 1 rewrite turned an exclusion around
   ("not when the package is over twenty pounds" became "and when the package is over 20 pounds").
-  The same rule now applies to a digest of your Obsidian or Notion notes; its effect on a prompt
+  The same rule now covers a digest of your Obsidian or Notion notes, though the digest is still
+  introduced as notes to trust over guesses; its effect on a prompt
   with notes present was not measured.
 - Prompt mode is faster: median 1.7 seconds against 2.4 for 1.1.1 without a screenshot (20 runs
   each, run alternately, 17 Nov 2026, M3 Pro) and 2.0 against 4.4 with one (10 runs each). It also
