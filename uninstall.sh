@@ -1,6 +1,6 @@
 #!/bin/bash
 # Senti uninstaller: removes what install.sh put on this Mac, after asking.
-#   ./uninstall.sh            asks before each step (the default answer is always No)
+#   ./uninstall.sh            asks once, then separately about settings and models (default: No)
 #   ./uninstall.sh --yes      removes Senti itself without asking; keeps your settings,
 #                             API keys and speech models
 #   ./uninstall.sh --yes --all   also removes settings, keys and speech models

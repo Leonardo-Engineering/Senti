@@ -2,6 +2,16 @@
 
 All notable changes to Senti. Dates are in US Eastern time.
 
+## [Unreleased]
+
+### Fixed
+
+- An answer that lost its closing tag after a short preamble ("Sure, here it is: <r>…") is pasted
+  without the preamble and the tag.
+- Docs, from a second claim-by-claim audit on 1.1.1: the README now says what happens when you switch
+  windows, press a hold key or use the menu while Senti is busy, and how `replacements.txt` lines are
+  written. PRIVACY says the uninstaller asks once, not before each step.
+
 ## [1.1.1] 2026-11-16
 
 ### Fixed

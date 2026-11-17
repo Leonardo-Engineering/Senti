@@ -74,7 +74,7 @@ brief.
 | Hold **right ⌥** | **Dictate** | Types exactly what you say. Fully local. |
 | Hold **right ⌘** | **Prompt** | Turns a rough spoken idea into a prompt for the model you are about to paste into. Adds a screenshot when that setting is on and Hammerspoon has Screen Recording permission; otherwise text only. |
 | Hold **Fn** | **Command** | Transforms the text you selected by voice ("make this a bullet list", "fix the grammar"). Sends your words and the selection. With no selection there is nothing to edit, so it writes a prompt from what you said, exactly as right ⌘ does. |
-| **⌃⌥V** | **Context** | Takes a screenshot plus your instruction, then drafts a reply, edit or answer at the cursor. |
+| **⌃⌥V** | **Context** | Takes a screenshot plus your instruction, then drafts a reply, edit or answer at the cursor. Press it, speak, and press it again to stop. |
 | `⌃⌥D` / `⌃⌥P` / `⌃⌥C` | Toggles | Hands-free versions of Dictate, Prompt and Command. |
 | `⌃⌥L` | **Paste last** | Pastes the last result again. Senti keeps it in memory for 5 minutes, never on disk, and forgets it when the screen locks. |
 
@@ -95,6 +95,13 @@ disappears. Things worth knowing:
 - **Cleanup.** Dictation drops filler words (um, uh, erm, hmm) and one opening "So," "Okay," "Well," or
   "Like,". `WF_REMOVE_FILLERS=0` in `config.local.sh` turns that off. Start and stop sounds:
   `WF_SOUNDS=0` silences them.
+- **Switching windows.** If you move to another window or tab before the text arrives, Senti does not
+  type it there: it puts it on the clipboard and says so. An unread count or a spinner in the title is
+  not a switch.
+- **While Senti is busy.** A hold key pressed while Senti is still writing the last result does not
+  start a new recording: after 0.4 seconds it says so, and the earlier result is typed when you let go.
+  Speed, Language and Restart engine in the menu wait until Senti is idle, because changing them
+  mid-turn would lose the words in flight.
 - **Another dictation tool on the same keys.** Senti checks whether Wispr Flow is running and warns you,
   because Wispr Flow's default dictation key is also Fn (on the Mac tested, its prompt shortcut also
   answered right ⌘).
@@ -186,7 +193,8 @@ shasum -a 256 -c SHA256SUMS
 
 **Language.** English by default. Pick another language, or automatic detection, in the menu bar
 (Language). Detection adds 0.3 to 0.8 seconds to each dictation. Any other Whisper language code works
-as `WF_LANG` in `~/.config/senti/config.local.sh`. The opening phrases that ask for more context in
+as `WF_LANG` in `~/.config/senti/config.local.sh` (`es`, `pt`, `zh`, `yue` and so on; a code Whisper
+does not know falls back to English). The opening phrases that ask for more context in
 Prompt mode ("think hard", "today let's work on") are English only.
 
 **Fast model (optional).** For a faster, English-only model, download it (148 MB) and switch in the
@@ -203,7 +211,7 @@ seconds against 0.50 for the default model, a 13 second clip 0.50 against 0.58, 
 0.62 against 1.09. The gain is mostly on dictations longer than 14 seconds. It detects the language itself among 25 European ones (the Language menu does not steer it, and for any other language Senti uses the default model) and takes no vocabulary hint, so
 project names lean on your `replacements.txt`. Download the model (669 MB), check it, then pick
 Speed, then Parakeet in the menu bar. Senti uses Parakeet for dictations under 30 seconds and the default model for longer ones and whenever
-Parakeet fails. On real recorded speech the 2 engines were close in accuracy; the default model stays the default.
+Parakeet fails or takes longer than 10 seconds (`WF_PARAKEET_TIMEOUT`, 1 to 30). On real recorded speech the 2 engines were close in accuracy; the default model stays the default.
 
 ```bash
 curl -L -o ~/.local/share/whisper-models/ggml-parakeet-tdt-0.6b-v3-q8_0.bin \
@@ -261,7 +269,7 @@ Add a key for any of them in the menu bar ("AI provider and key...") or with
 Prices are US dollars per 1 million tokens, from `ai-models.json`. OpenAI prices were checked on
 11 November 2026 on [OpenAI's pricing page](https://developers.openai.com/api/docs/pricing). Anthropic prices
 were checked on 15 November 2026 on [Anthropic's pricing page](https://platform.claude.com/docs/en/about-claude/pricing). OpenRouter prices come from OpenRouter's
-model list, fetched 14 November 2026; 2 that had changed by 15 November (Kimi and DeepSeek) were updated
+model list, fetched 13 and 14 November 2026; 2 that had changed by 15 November (Kimi and DeepSeek) were updated
 that day. Through OpenRouter one key reaches models from 10 labs; the list
 is picked from OpenRouter's catalog and its most-used models.
 
@@ -459,7 +467,7 @@ holds the defaults and their explanations, and every update replaces it. Common 
 `WF_BRAIN_RETRIEVE`, `WF_BRAIN_NOTION`), the recording tail (`WF_TAIL_MS`), the silence threshold
 (`WF_SILENCE_THOLD`, default 0.005) and the operating layer (`WF_OPERATING_LAYER=0` turns it off). The
 language is set in the menu bar; a `WF_LANG` line overrides the menu. Edit
-`replacements.txt` for vocabulary fixes (for example "cloud md" to `CLAUDE.md`) and
+`replacements.txt` for vocabulary fixes (for example "cloud md" to `CLAUDE.md`) (each line is what Senti hears, a `|`, and what to type; case does not matter and a rule fires only on a whole word) and
 `eval/cases.txt` for eval cases.
 
 `snippets.txt` holds phrases that type a fixed text when you say them on their own, one per line as
