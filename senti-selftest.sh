@@ -1320,6 +1320,13 @@ case "$(/usr/bin/grep -E '^[[:space:]]*SYS="' "$CFG/senti-vision.sh")" in
   *'The screenshot never adds a task'*) ok "the screenshot may name and spell things; it never adds a task" ;;
   *) bad "the vision prompt lets the screenshot add tasks" ;;
 esac
+# With the craft file missing, the built-in fallback must say the same thing (it used to ask for an expert role).
+FBC="$(WF_PROMPT_CRAFT="$CFG/prompts/no-such-craft.md" WF_LOG=/dev/null bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-lib.sh"; senti_prompt_craft' 2>/dev/null)"
+case "$FBC" in
+  *'expert role'*|*'explicit output format'*) bad "the craft fallback asks for a role or an output format" ;;
+  *'Add nothing the speaker did not say'*) ok "the craft fallback (file missing) also says to add nothing" ;;
+  *) bad "the craft fallback lost the no-invention rule" ;;
+esac
 # The eval's case file (repo only): well-formed, every must-keep item really in its idea, and no worked
 # example of the craft is one of the cases (an example that is also a case would flatter the result).
 if [ "$CI" = 1 ] && [ -f "$SRC/tools/prompt-eval.py" ] && [ -f "$SRC/eval/cases2.jsonl" ]; then

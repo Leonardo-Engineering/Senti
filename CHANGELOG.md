@@ -61,6 +61,11 @@ All notable changes to Senti. Dates are in US Eastern time.
   (requirements met 91.3%, 1.1.1 99.3%, no rewrite 98.1%; not a result at 15 ideas). The README has
   the tables.
 
+- When `prompt-craft.md` is missing (a broken install), the built-in fallback asked the rewriter for
+  "a precise expert role" and "an explicit output format", the opposite of the rules above. It now
+  says the same thing in 4 sentences, and the self-test checks it (208 checks offline). Found by the
+  fourth docs audit; not measured, like any path without the craft file.
+
 ### Added
 
 - `tools/prompt-eval.py` and `eval/cases2.jsonl` (repo only): an eval for Prompt mode that checks in
