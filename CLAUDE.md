@@ -151,7 +151,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 | `senti-config.sh` | installs the shipped `config.sh` and carries user settings into `config.local.sh` |
 | `senti-serve.sh` | the launchd entry point of the warm whisper server |
 | `app/make-icon.sh` | SVG → resvg → iconutil (no Pillow, no Python) |
-| `tools/prompt-eval.py` (repo only) | the Prompt mode eval on `eval/cases2.jsonl` (75 cases, 15 held back): code checks, reference-based judges, a stand-in destination, sign tests. `check` needs no network; `senti-selftest.sh --ci` runs it. How to run it: CONTRIBUTING.md, "Measuring Prompt mode" |
+| `tools/prompt-eval.py` (repo only) | the Prompt mode eval on `eval/cases2.jsonl` (75 cases, 15 held back; 15 long dictations in `eval/cases-long.jsonl`, 3 held back): code checks, reference-based judges, a stand-in destination, sign tests. `check` needs no network; `senti-selftest.sh --ci` runs it. How to run it: CONTRIBUTING.md, "Measuring Prompt mode" |
 | `tools/models-watch.py` (repo only) | weekly check (GitHub Action `models-watch.yml`): registry and `prompts/models` against OpenRouter's public list; opens an issue, edits nothing. Update procedure: CONTRIBUTING.md, "Keeping the model knowledge current" |
 | `uninstall.sh` (repo only) | asks, then removes the LaunchAgent, restores `init.lua`, removes app, cache, logs; asks again for keys and models |
 
@@ -335,15 +335,15 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
     shipped. 2 hostile reviews call the notes under "apply this" and the operating layer a contradiction
     of the craft. It is one on paper; the measured leak is 1 line in 144, and no notes-off arm was run on
     the shipped craft.
-  - **Long dictation is safe, and level (17 Nov 2026).** `eval/cases-long.jsonl`: 15 ideas of 228 to 278
-    words, 2 samples each. Said items lost 4 of 444 in code (all honest rewordings by hand; 1.1.1 37 of
-    444, fewer in 11 ideas and more in 1, p 0.006); 3 of 30 rewrites dropped something outside the
+  - **Long dictation keeps content; the answers do not separate (17 Nov 2026).** `eval/cases-long.jsonl`:
+    15 ideas of 228 to 278 words, 2 samples each. Said items lost, read by hand: r5 0 of 444; 1.1.1 15 of
+    444 in 8 of 30 rewrites (fewer for r5 in 6 ideas, more in 0, p 0.031). The code first said 4 and 37;
+    11 honest rewordings were added as accepted forms for every arm after the run (recorded in
+    `eval/runs/prereg.md`). Only r5's rewrites were read in full: 3 of 30 dropped something outside the
     must-keep list, 1 a prohibition (long-04 s1, "don't include medical details"). Additions judged 1 of
-    30, 4 of 30 on a rerun of the same craft, 5 of 30 by hand (all small: "apartment", guessed
-    `waitUntil`/`testUtils` casing, "the main you recommend"). Withdrawn values and misheard names: all
-    handled by hand; on the transcript 15 of 16 checks fired. Answers level: against raw 4-6-5, against 1.1.1 7-3-5,
-    noise row 1-6-8. Median generation time 4.7 s in the harness (not alternated). Record in
-    `eval/runs/prereg.md`.
+    30, 4 of 30 on a rerun of the same craft, by hand 5 of 30, 7 with carried-over "$" (long-15). Answers:
+    no result at 15 ideas (raw 4-6-5, leaning raw; 1.1.1 7-3-5; noise row 1-6-8). Median generation
+    4.7 s in the harness, not alternated.
   - **Expect much the same output for every destination** (3 ideas x Claude Code, ChatGPT, Codex, 1 sample
     each, an earlier revision, 16 Nov 2026: 2 identical, 1 differing by 2 words;
     `eval/runs/notes/same-prompt-3-ideas.txt`). Do not claim per-destination tailoring anywhere until a
