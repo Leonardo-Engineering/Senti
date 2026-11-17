@@ -50,11 +50,20 @@ fi
 RESULT="$(printf '%s' "$OUT" | extract_r | trim)"
 # Degrade in order: tagged answer → untagged answer (model ignored the sentinel but
 # still optimized) → raw transcript.
+# An answer with an opening tag and no closing one. Nothing before the tag, or a short preamble that
+# ends a clause ("Sure, here it is: <r>the answer…"), is the model talking: keep what follows the
+# tag. Anything else ("Use <r> for ruby text.") is an untagged answer that mentions the tag: keep it whole.
+cut_tag() {
+  local before="${1%%<r>*}" after="${1#*<r>}" b
+  b="${before%"${before##*[![:space:]]}"}"       # without trailing spaces
+  case "$b" in ''|*[:.!]) [ "${#before}" -le 120 ] && { printf '%s' "$after"; return; } ;; esac
+  printf '%s' "$1"
+}
 if blank "$RESULT"; then
   OUT="$(printf '%s' "$OUT" | trim)"                                  # a space or newline before the tag
   case "$OUT" in
     *"<r>"*"</r>"*) : ;;                                              # a closed, empty pair: not pasted as literal tags
-    "<r>"*) RESULT="$(printf '%s' "${OUT#<r>}" | trim)" ;;           # it starts with the tag and the closing one was cut off
+    *"<r>"*) RESULT="$(cut_tag "$OUT" | trim)" ;;                    # the closing tag was cut off, or the answer only mentions the tag
     *) RESULT="$(printf '%s' "$OUT" | trim)" ;;
   esac
 fi

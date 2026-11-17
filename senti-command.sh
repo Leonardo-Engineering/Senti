@@ -59,12 +59,20 @@ fi
 RESULT="$(printf '%s' "$OUT" | /usr/bin/perl -0777 -ne 'my @o = /<r>/g; if (@o == 1) { print $1 if /<r>(.*)<\/r>/s } else { my @m = /<r>(.*?)<\/r>/sg; print $m[-1] if @m }')"   # see extract_r in senti-prompt.sh
 # Fallback only if the model omitted the tags. An EMPTY tagged answer ("delete this") used to fall
 # through here and paste the literal <r></r> over the selection; it now ends as an empty answer.
+# An answer with an opening tag and no closing one. Nothing before the tag, or a short preamble that
+# ends a clause ("Sure, here it is: <r>the answer…"), is the model talking: keep what follows the
+# tag. Anything else ("Use <r> for ruby text.") is an untagged answer that mentions the tag: keep it whole.
+cut_tag() {
+  local before="${1%%<r>*}" after="${1#*<r>}" b
+  b="${before%"${before##*[![:space:]]}"}"       # without trailing spaces
+  case "$b" in ''|*[:.!]) [ "${#before}" -le 120 ] && { printf '%s' "$after"; return; } ;; esac
+  printf '%s' "$1"
+}
 if blank "$RESULT"; then
   OUT="$(printf '%s' "$OUT" | /usr/bin/perl -0777 -pe 's/^\s+//')"   # a space or newline before the tag
   case "$OUT" in
     *"<r>"*"</r>"*) : ;;                          # a closed, empty pair: an empty answer
-    "<r>"*) RESULT="${OUT#<r>}" ;;                # it starts with the tag and the closing one was cut off
-    *"<r>"*) RESULT="$OUT" ;;                     # an untagged answer that only mentions the tag
+    *"<r>"*) RESULT="$(cut_tag "$OUT")" ;;        # the closing tag was cut off, or the answer only mentions the tag
     *) RESULT="$OUT" ;;                           # no tags at all
   esac
 fi

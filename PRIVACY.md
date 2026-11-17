@@ -138,7 +138,7 @@ Some of this is sent, as the tables above say. The rest never leaves the Mac.
 | `~/.cache/senti/sessions/<window>.tsv` | Session memory: Prompt, Command and Context turns, the first 200 bytes of each, at most 12 per window. Mode 600 | Turns older than 24 hours are never recalled. Files are deleted 24 hours after their last turn, at launch and every 30 minutes while Senti runs |
 | `~/.cache/senti/mictest.wav` | The 1.2 second clip of the menu's microphone test | Swept like `capture.wav` |
 | `~/.cache/senti/muted-by-senti` | The ID of the output device while Senti has it muted (only with that option on) | Deleted when Senti unmutes it |
-| `~/.cache/senti/sox.pid`, `target.pref`, `allow-ipc` | The recorder's process ID, a remembered destination choice, the opt-in flag for `hs.ipc`. No speech | Until replaced or removed |
+| `~/.cache/senti/sox.pid`, `target.pref`, `allow-ipc` | The recorder's process ID, a destination model family you set by hand (Senti never writes it), the opt-in flag for `hs.ipc`. No speech | Until replaced or removed |
 | `~/.config/senti/eval/history.csv` | Scores and counts from eval runs you start yourself (`senti-eval.sh`). No prompt text | Until you delete it |
 | `~/.config/senti/config.sh.v<N>.bak` | Your previous `config.sh`, kept by an update | Until you delete it |
 | `~/.cache/senti/last-request.json` | Names and counts from the last AI request. Mode 600. No speech, prompt or answer text | Replaced by the next AI request |
@@ -183,7 +183,7 @@ the same day at 6 screen widths and made 0 requests to other hosts.
 
 ## Removing Senti and its data
 
-Run `./uninstall.sh` from your copy of the repository. It asks before each step. It removes the
+Run `./uninstall.sh` from your copy of the repository. It lists what it will remove and asks once. It removes the
 LaunchAgent, Senti.app, `~/.cache/senti` and the logs, and asks separately about `~/.config/senti`
 with your Keychain items, and about the speech models. See the README's Uninstall section.
 
