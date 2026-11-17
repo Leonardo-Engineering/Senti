@@ -111,7 +111,7 @@ $(cat "$craft")"
     out="
 
 --- How to build the prompt ---
-Apply: a precise expert role; an unambiguous task and end goal; only the constraints that matter; an explicit output format; as SHORT as possible while complete. Preserve every specific the user gave. Do not answer the request or add commentary."
+Write the message the speaker would send if they had typed it with care. Keep every number, name, condition, prohibition and hedge as said. Add nothing the speaker did not say: no role, no tone, no output format, no extra steps. Do not answer the request or add commentary."
   fi
   # Target guidance is TRUSTED: the (untrusted) title only selects which repo KB file to
   # read; the file's content ships with Senti. Safe in the system role.
