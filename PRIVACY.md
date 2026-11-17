@@ -26,7 +26,8 @@ The screenshot is of the window you are working in (your main display when no wi
 captured, or the window is very small), shrunk with `sips` so its long edge is 1536 pixels
 (`WF_SHOT_PX`, default in `config.sh`) and saved as JPEG. If `sips` fails, the original PNG is sent instead.
 
-The self-test and the eval scripts also call your provider, but only when you run them. The
+The self-test also calls your provider, and the eval scripts call OpenAI (`gpt-6-luna`) whatever
+provider you chose, but only when you run them. The
 self-test's live check sends a screenshot of your main display.
 
 ### Heavy turns: when history and notes are sent

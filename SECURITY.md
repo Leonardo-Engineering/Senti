@@ -125,7 +125,8 @@ Each line names the code that does it, so you can check it.
   them; the README gives Parakeet's SHA-256 to compare by hand.
 - At run time Senti calls only the AI provider you chose: when you use an AI mode, and when it checks
   a key (`senti-key.sh test`), which reads the provider's free model or key list. The self-test and
-  the eval scripts call the same provider when you run them. With the Notion source on, it also calls
+  the eval scripts (`tools/prompt-eval.py`, `senti-judge.sh`) call OpenAI `gpt-6-luna` for their judges
+  whatever provider you chose, and only when you run them. With the Notion source on, it also calls
   `api.notion.com` to read the pages you mapped, on heavy Prompt turns and in `--preview`.
 
 ## Scope

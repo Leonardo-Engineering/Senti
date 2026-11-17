@@ -21,6 +21,7 @@ appicon.iconset/
 openai-key
 *-key
 eval/history.csv
+eval/runs
 
 
 # Private operator notes (never commit — names the private KB repo + real vault paths)
