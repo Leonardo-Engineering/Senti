@@ -237,8 +237,9 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
     empty string back with no error.
   - **Output dominates cost** (~6x input price), so trimming what the model *writes* beats
     trimming what you send. Prompt caching DOES engage: the system prompt (operating layer +
-    craft, + target digest when on) is well over OpenAI's 1,024-token minimum (about 2,200 input tokens per
-    text call on 17 Nov 2026 with the notes on, `eval/runs/notes/tokens-r5.txt`; without them the craft
+    craft, + target digest when on) is well over OpenAI's 1,024-token minimum (about 1,700 input tokens per
+    text call with the notes off, the default since 1.3.0: median 1,694 in, arm r7, 17 Nov 2026; about 2,200 with them
+    on, `eval/runs/notes/tokens-r5.txt`; without them the craft
     block is 0.8 to 3.4 KB shorter (786 to 3,350 bytes over the 20 model sections, offline build, 17 Nov 2026), 5.56 KB left; a heavy turn on 13 Nov 2026, with the
     old craft, logged `in=1401 cache_read=1179`).
     Anthropic's minimum is 512 tokens on the 5.5 models, and its system block is marked
