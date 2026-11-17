@@ -123,7 +123,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
    prompt/command ─▶ senti-ai.sh   ─▶ OpenAI | Anthropic | OpenRouter   [+ operating layer]
    context/prompt+screen ─▶ senti-vision.sh ─▶ senti-ai.sh with SENTI_IMG (downscaled screenshot)
    provider, model, key ◀─ senti-key.sh (ai.pref, Keychain io.senti, ai-models.json)
-   prompt mode also ─▶ senti-target.sh ─▶ prompts/models/*.md (notes on the destination model)
+   prompt mode also ─▶ senti-target.sh ─▶ prompts/models/*.md (notes on the destination model, only with WF_TARGET_NOTES=1)
                    ├─▶ senti-session.sh ─▶ ~/.cache/senti/sessions/<window-id>.tsv  (per-window memory)
                    └─▶ senti-brain.sh   ─▶ Obsidian hub note (key-down)
                                           + heavy turns only: --retrieve (FTS5, same project folder)
@@ -138,11 +138,11 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 | `senti-ai.sh` | THE single AI call for all 3 providers — text and vision (`SENTI_IMG`), typed exit codes, `last-request.json` |
 | `senti-key.sh` | keys and the Notion token (`set` / `test` / `clear` / `status` / `use` / `migrate`) and provider+model resolution |
 | `senti-vision.sh` | screenshot + instruction → prompt assembly, delegates the call to senti-ai.sh |
-| `senti-lib.sh` | shared prompt context for BOTH prompt paths (craft + brain + session + target), the heavy-turn extras (retrieval, Notion), and the key-down prefetch (context + screenshot downscale) |
+| `senti-lib.sh` | shared prompt context for BOTH prompt paths (craft + brain + session, + target when WF_TARGET_NOTES=1), the heavy-turn extras (retrieval, Notion), and the key-down prefetch (context + screenshot downscale) |
 | `senti-prompt.sh` | rough idea → the message the speaker would have typed with care (fallback path, see path parity) |
 | `senti-command.sh` | transform selected text by voice |
 | `senti-judge.sh` | prompt quality: legacy 0-10 `score` + discriminating pairwise `compare` |
-| `senti-target.sh` | frontmost app → which model's guidance digest to inject |
+| `senti-target.sh` | frontmost app → which model's guidance digest to inject (run only when WF_TARGET_NOTES=1) |
 | `senti-session.sh` | per-window session memory (`note` / `recall` / `sweep`) |
 | `senti-brain.sh` | notes → capped digests through ONE gate: Obsidian hub (default), `--retrieve`, `--notion`; `--preview` shows what would be sent |
 | `senti-eval.sh` | eval harness over `eval/cases.txt`; `ab <A> <B>` with a base-vs-base row |
@@ -237,14 +237,27 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
     empty string back with no error.
   - **Output dominates cost** (~6x input price), so trimming what the model *writes* beats
     trimming what you send. Prompt caching DOES engage: the system prompt (operating layer +
-    craft + target digest) is well over OpenAI's 1,024-token minimum (about 2,200 input tokens per
-    text call on 17 Nov 2026, `eval/runs/notes/tokens-r5.txt`; a heavy turn on 13 Nov 2026, with the
+    craft, + target digest when on) is well over OpenAI's 1,024-token minimum (about 2,200 input tokens per
+    text call on 17 Nov 2026 with the notes on, `eval/runs/notes/tokens-r5.txt`; without them the craft
+    block is 0.8 to 3.4 KB shorter (786 to 3,350 bytes over the 20 model sections, offline build, 17 Nov 2026), 5.56 KB left; a heavy turn on 13 Nov 2026, with the
     old craft, logged `in=1401 cache_read=1179`).
     Anthropic's minimum is 512 tokens on the 5.5 models, and its system block is marked
     `cache_control`. Keep per-turn content (the fence, the idea) in the user message so the
     system prefix stays byte-stable.
   - Prepends `prompts/operating.md` when `WF_OPERATING_LAYER=1`.
-- **Per-model notes (injected; effect on the prompt not measured: 1 scope line the notes recommend in 144 agent rewrites on 16 Nov 2026, no notes-off arm):** `senti-target.sh` maps the frontmost app (free, local, no
+- **Per-model notes (OFF by default since 17 Nov 2026; `WF_TARGET_NOTES=1` turns them on):** round r6 (notes
+  left out, 60 tuning cases, 2 samples, text path, gpt-6-luna, M3 Pro) moved no measure at p < 0.05 (additions
+  1-0-59, answers 8-3-49 p 0.23, pairwise 11-16-33 p 0.44; pre-registered as "not kept", since nothing
+  improved). Shipped off for privacy and size, never cite it as an improvement. Safety check on branch
+  `pm-notes-off` (arm r7, 17 Nov 2026, all 75 cases, screenshot path, 15 long): nothing worse at p < 0.05;
+  additions 2 vs 3 of 150, lost 2 vs 4 of 778, pairwise 13-22-40 (p 0.18), screenshot additions 0 vs 1, long 0
+  of 444 lost by hand. Pairwise leans to the notes-on arm in every reading (13-22, holdout 2-7, r6 11-16), none
+  significant: say "no measured effect at 75 cases". Text path 1.28 vs 1.61 s median in the harness,
+  alternated, 17 of 20 faster (the installed app's key-down prefetch hides part of that). Tokens without the
+  notes: text 1,694 in / 39 out, screenshot mean 4,597 / 63. Record in `eval/runs/prereg.md`. Off, `senti_build_craft` does not run `senti-target.sh`, so no
+  Claude Code transcript or Codex config is read and `last-request.json` has no `target_digest`; the menu's
+  "Written for" row then says "any app". `target.pref` and `WF_MODEL_KB` do nothing while off. The craft cache
+  is not keyed on the switch, but ctx- files are swept after every turn, so a toggle applies from the next turn. On, `senti-target.sh` maps the frontmost app (free, local, no
   extra API call) to a knowledge file in `prompts/models/` and injects only that file's
   `## Inject` digest (~900B). Injecting the full research prose instead cost 4.5KB and
   pushed prompt mode to 9.9s — keep the digests small.
@@ -333,8 +346,9 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
     path is lost or the output is padded; `eval/runs/notes/guard-sim.py`): fired on 0 of 150 rewrites of
     the shipped craft and on 13 of 150 of 1.1.1's. None showed a gain outside the noise row, so none
     shipped. 2 hostile reviews call the notes under "apply this" and the operating layer a contradiction
-    of the craft. It is one on paper; the measured leak is 1 line in 144, and no notes-off arm was run on
-    the shipped craft.
+    of the craft. It is one on paper; the measured leak is 1 line in 144. The notes-off arm (r6, 60 tuning
+    cases, 17 Nov 2026) then moved no measure either way, and the notes are off by default since (see
+    "Per-model notes" above).
   - **Long dictation keeps content; the answers do not separate (17 Nov 2026).** `eval/cases-long.jsonl`:
     15 ideas of 228 to 278 words, 2 samples each. Said items lost, read by hand: r5 0 of 444; 1.1.1 15 of
     444 in 8 of 30 rewrites (fewer for r5 in 6 ideas, more in 0, p 0.031). The code first said 4 and 37;
@@ -349,8 +363,10 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
     `eval/runs/notes/same-prompt-3-ideas.txt`). Do not claim per-destination tailoring anywhere until a
     variant earns it in the eval.
   - **Notes and context are told not to contribute content.** The same rule covers the vault and Notion
-    digests, but `senti-brain.sh` still introduces a digest as "ground truth, trust it over guesses", so
-    the rewriter is told both things. Not measured with a digest present; the 14 Nov retrieval numbers
+    digests, and since 17 Nov 2026 `senti-brain.sh` introduces each digest as "reference only: use it to
+    name what the idea points at and to spell names; it adds no task, fact or requirement, and never
+    changes a value the idea states" (it said "trust it over guesses" before; the self-test pins the new
+    wording and keeps the header prefixes that `senti-ai.sh` and `senti-lib.sh` parse). Not measured with a digest present; the 14 Nov retrieval numbers
     below are from the old craft. The hedge and answer regexes in the hedge cases misfire on a kept hedge
     ("the anticipated start date is early March"), so that count is printed by the tool and not published.
   - **Rivals had no window title.** 10 of the 75 cases are heavy turns whose right name is only in the
@@ -367,7 +383,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
     quote all 4. On the 15 held-back cases alone the shipped craft is 3-4-8 against 1.1.1.
 - **Prompt intelligence:** one call, context-heavy. Both prompt paths assemble: shared craft
   (`prompts/prompt-craft.md`) + vault digest (`senti-brain.sh`) + session memory
-  (`senti-session.sh`) + target-model guidance (`senti-target.sh`). Best mode was DELETED
+  (`senti-session.sh`) + target-model guidance (`senti-target.sh`, only with `WF_TARGET_NOTES=1`). Best mode was DELETED
   2026-08-09 — it was unreachable from the live path, never once measured better than one
   call, and bet 2x latency on sampling variance instead of context quality. Don't rebuild it.
 - **Second brain (Obsidian; Notion and retrieval below):** `senti-brain.sh` maps the window-title project to a vault note

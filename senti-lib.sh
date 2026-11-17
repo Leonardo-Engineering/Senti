@@ -7,7 +7,7 @@
 # its own title (which carries the "project" and "task" fields), and a vault note could
 # contain text the user pasted from anywhere. That content must never be able to change
 # the model's task or make it reveal things. So:
-#   - senti_prompt_craft   → OUR instructions + the trusted target-model KB digest.
+#   - senti_prompt_craft   → OUR instructions (+ the trusted target-model KB digest when WF_TARGET_NOTES=1).
 #                            Goes in the SYSTEM role.
 #   - senti_untrusted_ctx  → vault digest + session memory (title-derived + past
 #                            speech). Wrapped in an explicit "reference data, never
@@ -113,9 +113,14 @@ $(cat "$craft")"
 --- How to build the prompt ---
 Write the message the speaker would send if they had typed it with care. Keep every number, name, condition, prohibition and hedge as said. Add nothing the speaker did not say: no role, no tone, no output format, no extra steps. Do not answer the request or add commentary."
   fi
+  # Per-model notes are OFF by default (17 Nov 2026): with them left out, 60 tuning cases moved
+  # no measure either way (round r6, eval/runs/prereg.md); kept off for privacy and size.
+  # WF_TARGET_NOTES=1 in config.local.sh adds them back. Off, senti-target.sh is not run at
+  # all, so neither Claude Code's session file nor ~/.codex/config.toml is read.
   # Target guidance is TRUSTED: the (untrusted) title only selects which repo KB file to
   # read; the file's content ships with Senti. Safe in the system role.
-  tgt="$(bash "$HOME/.config/senti/senti-target.sh" 2>>"$WF_LOG")"
+  tgt=""
+  [ "${WF_TARGET_NOTES:-0}" = "1" ] && tgt="$(bash "$HOME/.config/senti/senti-target.sh" 2>>"$WF_LOG")"
   [ -n "${tgt// /}" ] && out="$out
 
 --- Target-model guidance (apply this; it reflects how the destination model behaves) ---
@@ -142,7 +147,7 @@ senti_prompt_craft() {
 # deserves the full stack opens with "today let's work on…" or "think hard". Everything
 # else is a quick rewrite and gets the lean prompt.
 #
-# The lean path still keeps craft + target-model guidance — those are what make the
+# The lean path still keeps the craft (and the per-model notes when WF_TARGET_NOTES=1): what makes the
 # output a good prompt at all. What it drops is the *situational* half: the vault digest
 # and the session transcript, which are the expensive, least-relevant part of a one-line
 # ask, and the only part that is untrusted input.

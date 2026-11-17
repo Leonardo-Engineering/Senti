@@ -160,10 +160,12 @@ a change to Prompt mode.
 
 ## Keeping the model knowledge current
 
-Senti gives its rewriter notes on how each destination model reads a prompt. Since 16 November 2026
-the eval has seen little sign of them in the prompt (see
-[Measuring Prompt mode](#measuring-prompt-mode); a version without the notes was not measured), and
-they are kept current so that a later variant can use them. The notes are plain text in `prompts/models/`, and the list of models Senti can call is
+Senti can give its rewriter notes on how each destination model reads a prompt. They are off by
+default since 17 November 2026: a version without them had no measured effect either way on the 60
+tuning ideas (round r6, 2 samples each, `gpt-6-luna`, M3 Pro; see
+[Measuring Prompt mode](#measuring-prompt-mode)), and they are off for privacy and size, not because
+leaving them out measured better. `WF_TARGET_NOTES=1` in `config.local.sh` turns them on. They are
+kept current for 1 more release so that a later variant can use them. The notes are plain text in `prompts/models/`, and the list of models Senti can call is
 `ai-models.json`. Both go stale when a lab ships a model.
 
 - **The watch.** `python3 tools/models-watch.py` compares the two with OpenRouter's public model list
@@ -176,8 +178,8 @@ they are kept current so that a later variant can use them. The notes are plain 
   thing a prompt writer should do differently for that model, with the source URL and the date under
   `## Sources`. Models in one family differ (default effort, how literally they follow instructions,
   how long they answer), so write what that model's page says, not what its family is known for. Set
-  `updated:` in the file's front matter. Keep the `## Inject` digest under about 900 characters: it is
-  the only family text sent with every prompt.
+  `updated:` in the file's front matter. Keep the `## Inject` digest under about 900 characters: with the notes
+  on, it is the family text sent with every prompt.
 - **Prices and new models.** Change `ai-models.json` (and its `checked` date), then the tables in
   `README.md`. Prices for `openai` and `anthropic` rows come from the lab's own pricing page.
 - **Prove it.** Run the offline self-test, and for any change to prompting text run the eval in

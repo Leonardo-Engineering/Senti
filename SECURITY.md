@@ -40,7 +40,7 @@ Each line names the code that does it, so you can check it.
   the scripts and Python in environment variables, never in argv (`senti.lua`, `wf.runScript`;
   `senti-ai.sh`, the `SENTI_*` variables passed to Python). The retrieval query (what you said) reaches
   its Python ranker in `SENTI_Q`, and note paths and digests reach it on standard input
-  (`senti-brain.sh`). When `senti-target.sh` looks for the Claude Code session
+  (`senti-brain.sh`). When the per-model notes are on (`WF_TARGET_NOTES=1`, off by default) and `senti-target.sh` looks for the Claude Code session
   file of the project named in the window title, it matches file names with a bash glob loop inside
   the shell, so window titles never go on a command line. The self-test runs canary strings through
   these paths and fails if one shows up in a `ps` snapshot (`senti-selftest.sh`).

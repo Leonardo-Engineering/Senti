@@ -136,13 +136,12 @@ cp "$HERE/ai-models.json" "$CFG/"
 mkdir -p "$CFG/prompts"; cp "$HERE"/prompts/*.md "$CFG/prompts/" 2>/dev/null || true
 # Model-aware prompting knowledge base — code, always update.
 mkdir -p "$CFG/prompts/models"; cp "$HERE"/prompts/models/*.md "$CFG/prompts/models/" 2>/dev/null || true
-# Both copies above are `|| true`, so a missing prompts/ (a copy of the repo with the KB
-# split out, see CLAUDE.md) would fail silently and the AI modes would run with no craft
-# layer and no model guidance while still looking fine. Say so loudly instead.
+# Both copies above are `|| true`, so a missing prompts/ would fail silently and Prompt mode
+# would run on the short built-in craft while still looking fine. Say so loudly instead.
 # Check the SOURCE, not the deployed copy: the previous install's files would keep
-# this check quiet while KB updates stop.
-if [ ! -f "$HERE/prompts/models/_techniques.md" ]; then
-  echo "  ! no prompting knowledge base in $HERE/prompts, so AI modes will run without model guidance."
+# this check quiet while updates stop.
+if [ ! -f "$HERE/prompts/prompt-craft.md" ]; then
+  echo "  ! no prompts/prompt-craft.md in $HERE, so Prompt mode will run on a short built-in fallback."
 fi
 # Eval cases are user-tunable — install only if missing.
 mkdir -p "$CFG/eval"; [ -f "$CFG/eval/cases.txt" ] || cp "$HERE/eval/cases.txt" "$CFG/eval/" 2>/dev/null || true

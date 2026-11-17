@@ -4,6 +4,30 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ## [Unreleased]
 
+### Changed
+
+- Prompt mode no longer adds notes on the destination model to the rewriter's instructions, and Senti
+  no longer reads Claude Code's session file or Codex's config by default (it read them only to pick
+  those notes). This is shipped for privacy and size, not as an improvement: leaving the notes out had
+  no measured effect either way on 60 tuning ideas (round r6, 2 samples each, `gpt-6-luna`, M3 Pro, 17
+  Nov 2026). Rewrites with an addition 0 against 1 of 120, said items lost 0 against 2 of 628, answers
+  per requirement 8 better, 3 worse, 49 tied (p 0.23), pairwise answers 11 better, 16 worse, 33 tied
+  (p 0.44). A safety check the same evening on all 75 ideas (held-back ones included), the screenshot
+  path and the 15 long dictations found no measure worse: additions 2 against 3 of 150, said items lost
+  2 against 4 of 778, pairwise answers 13 better, 22 worse, 40 tied (p 0.18, not a result), screenshot
+  path additions 0 against 1, long dictations 0 of 444 lost read by hand. In the eval harness the text
+  path was faster in 17 of 20 ideas (median 1.28 against 1.61 s, run alternately); the installed app looks
+  the notes up while you speak, so the gain you notice may be smaller. Senti's instructions are 0.8 to 3.4 KB shorter (786 to 3,350 bytes, depending on the app; offline build, 17 Nov 2026). The notes stay in `prompts/models/` for 1
+  release, and `WF_TARGET_NOTES=1` (exactly 1) in `config.local.sh` adds them back. The menu's "Written for" row
+  now says "any app" when the last prompt carried no notes.
+- If you set `WF_MODEL_KB` or wrote a family to `~/.cache/senti/target.pref`, add `WF_TARGET_NOTES=1`
+  to `~/.config/senti/config.local.sh`: both now do nothing unless the notes are on.
+- A digest of your Obsidian or Notion notes on a heavy turn is now introduced to the rewriter as
+  reference only: to name what the idea points at and to spell names, adding no task, fact or
+  requirement and never changing a value the idea states. Before, it said to trust the notes over
+  guesses, which contradicted the rule that context adds nothing. Its effect on a prompt with notes
+  present has not been measured.
+
 ## [1.2.0] 2026-11-17
 
 ### Changed
