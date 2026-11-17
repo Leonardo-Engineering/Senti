@@ -19,7 +19,7 @@ Senti is free and MIT licensed, with no account.
 
 *Senti* is Italian for "listen."
 
-**Contents:** [Prompt mode](#prompt-mode-what-you-said-written-with-care) · [Modes](#modes) · [Speed](#speed) · [Install](#install) · [AI key](#add-an-ai-key-optional) · [Models](#bring-your-own-ai) · [Second brain](#second-brain) · [Privacy](#privacy-and-security) · [Uninstall](#uninstall) · [How it works](#how-it-works) · [Config](#config)
+**Contents:** [Install](#install) · [AI key](#add-an-ai-key-optional) · [Prompt mode](#prompt-mode-what-you-said-written-with-care) · [Modes](#modes) · [Speed](#speed) · [Models](#bring-your-own-ai) · [Second brain](#second-brain) · [Privacy](#privacy-and-security) · [Uninstall](#uninstall) · [How it works](#how-it-works) · [Config](#config)
 
 ## What it looks like
 
@@ -33,6 +33,136 @@ captured from the app's own window.
 
 The "AI provider and key" panel opens from the menu bar on first run. Dictation needs no key. This
 image is rendered from the panel's own HTML in a browser.
+
+## Install
+
+You need:
+
+- a Mac with Apple Silicon (M1 or later). The installer stops on any other Mac;
+- [Homebrew](https://brew.sh);
+- [Hammerspoon](https://www.hammerspoon.org), which Senti runs inside. `install.sh` offers to
+  install it with Homebrew if it is missing;
+- the Xcode Command Line Tools (`xcode-select --install`). They are needed once, to build the helper
+  that shows the Microphone permission prompt; `install.sh` builds it only when they are present;
+- about 0.6 GB of disk for the default speech model (574 MB), plus about 80 MB for the Homebrew
+  packages themselves, not counting libraries they pull in (measured 13 November 2026).
+
+The installer does not check the macOS version. Senti was tested on macOS 27.0.1, where the offline
+self-test of this version passed on 17 November 2026.
+
+```bash
+git clone https://github.com/Leonardo-Engineering/Senti.git ~/code/senti
+cd ~/code/senti && ./install.sh
+```
+
+**Update.** Senti has no update check. To update, pull and run the installer again:
+
+```bash
+cd ~/code/senti && git pull && ./install.sh
+```
+
+What `install.sh` does, in order:
+
+1. Checks for `whisper-cpp`, `sox`, `resvg` and Hammerspoon, and offers to install any that are
+   missing with Homebrew (`brew install`, and `brew install --cask hammerspoon`).
+2. Downloads the speech model (574 MB) and checks it against its published SHA-256. A download that
+   does not match is deleted.
+3. Copies Senti's scripts and settings to `~/.config/senti`.
+4. **Replaces `~/.hammerspoon/init.lua`** with Senti's. If you already had your own `init.lua`, it is
+   first saved as `init.lua.pre-senti.<date>-<time>` in the same folder.
+5. Installs a LaunchAgent (`io.senti.server`) that keeps the speech server running on `127.0.0.1`,
+   and `~/Applications/Senti.app`, an on and off switch: opening it starts Senti, and opening it again
+   while Senti runs quits Hammerspoon.
+6. Moves a key file left by an older install into the Keychain (`senti-key.sh migrate`; the file is
+   deleted only after the Keychain copy reads back the same). Then it offers to add an AI key (see
+   below) when none is stored yet. The offer is skipped with `--yes`; the move is not.
+
+Senti also sets Hammerspoon to open at login and hides Hammerspoon's own menu-bar and Dock icons (its
+own icon replaces them). To start Senti after installing, open Hammerspoon or `Senti.app`.
+
+`./install.sh --yes` installs missing pieces without asking. Running it again later updates Senti.
+Put your own settings in `~/.config/senti/config.local.sh`: `install.sh` never overwrites that file.
+`config.sh` holds the defaults and is replaced on every update (the previous one is kept as
+`config.sh.v<N>.bak`). The first update from an older install moves the settings you had added to
+`config.sh` into `config.local.sh` for you, and lists any line it was unsure about there as a comment.
+Your `replacements.txt`, `snippets.txt`, `brain-map.txt` and eval cases are kept.
+
+The [Releases page](https://github.com/Leonardo-Engineering/Senti/releases/latest) has the same
+source. Releases from 1.1.0 on attach a source tarball (`senti-<version>.tar.gz`) and a `SHA256SUMS` file. Check
+your download in the folder you saved both files to:
+
+```bash
+shasum -a 256 -c SHA256SUMS
+```
+
+**Permissions.** Senti runs inside Hammerspoon, so the macOS permission prompts name
+**Hammerspoon**, not Senti:
+
+- **Accessibility** (to see the hold keys and type): usually prompted on first use.
+- **Microphone**: menu-bar icon → *Grant / test microphone* → Allow.
+- **Screen Recording** (only for Context, and for Prompt with screenshots): menu-bar icon → *Grant
+  screen recording*, then relaunch Hammerspoon.
+
+**Language.** English by default. Pick another language, or automatic detection, in the menu bar
+(Language). Detection adds 0.3 to 0.8 seconds to each dictation. Any other Whisper language code works
+as `WF_LANG` in `~/.config/senti/config.local.sh` (`es`, `pt`, `zh`, `yue` and so on; a code Whisper
+does not know falls back to English). The opening phrases that ask for more context in
+Prompt mode ("think hard", "today let's work on") are English only.
+
+**Fast model (optional).** For a faster, English-only model, download it (148 MB) and switch in the
+menu bar (Speed, then Fast). This download is not checksum-verified:
+
+```bash
+curl -L -o ~/.local/share/whisper-models/ggml-base.en.bin \
+  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
+```
+
+**Parakeet (optional).** NVIDIA's Parakeet model runs through the `parakeet-cli` that Homebrew's
+whisper-cpp already installs. Measured on an M3 Pro on 15 November 2026, key-up to text: a 4 second clip took 0.40
+seconds against 0.50 for the default model, a 13 second clip 0.50 against 0.58, and a 21 second clip
+0.62 against 1.09. The gain is mostly on dictations longer than 14 seconds. It detects the language itself among 25 European ones (the Language menu does not steer it, and for any other language Senti uses the default model) and takes no vocabulary hint, so
+project names lean on your `replacements.txt`. Download the model (669 MB), check it, then pick
+Speed, then Parakeet in the menu bar. Senti uses Parakeet for dictations under 30 seconds and the default model for longer ones and whenever
+Parakeet fails or takes longer than 10 seconds (`WF_PARAKEET_TIMEOUT`, 1 to 30). On real recorded speech the 2 engines were close in accuracy; the default model stays the default.
+
+```bash
+curl -L -o ~/.local/share/whisper-models/ggml-parakeet-tdt-0.6b-v3-q8_0.bin \
+  https://huggingface.co/ggml-org/parakeet-GGUF/resolve/main/ggml-parakeet-tdt-0.6b-v3-q8_0.bin
+shasum -a 256 ~/.local/share/whisper-models/ggml-parakeet-tdt-0.6b-v3-q8_0.bin
+# 4d64e9e96c2792186d072fde0034df0ad670cf680a2f53069052ead827fd600e
+```
+
+The model is NVIDIA's `parakeet-tdt-0.6b-v3` (CC-BY-4.0), converted by the whisper.cpp project.
+
+## Add an AI key (optional)
+
+Dictation never needs a key. Prompt, Command and Context use your own key for one of the providers
+below. There are 2 safe ways to add it:
+
+- **The panel.** Menu bar → **AI provider and key…**. It opens by itself once, on the first run with
+  no key. Pick a provider, paste the key, and Senti saves it and checks it against the provider's free
+  model or key list.
+- **The terminal.** Run this and paste the key at the hidden prompt:
+
+  ```bash
+  bash ~/.config/senti/senti-key.sh set openai      # or anthropic, or openrouter
+  ```
+
+  The key is read from the prompt or standard input, never from the command line, so it does not
+  land in your shell history or in the process list.
+
+Keys are stored in your macOS Keychain, encrypted on disk. Senti sends a key only to that provider.
+Programs running as your macOS user can still read it. If the Keychain is locked or unavailable,
+Senti saves the key in a mode-600 file under `~/.config/senti` instead and tells you so.
+
+```bash
+bash ~/.config/senti/senti-key.sh status          # which keys exist, last 4 characters only
+bash ~/.config/senti/senti-key.sh test openai     # checks the key with the provider
+bash ~/.config/senti/senti-key.sh clear openai    # removes it
+```
+
+Never type or paste a key into a command line (an `echo` into a file, for example): it stays in your
+shell history.
 
 ## Prompt mode: what you said, written with care
 
@@ -276,136 +406,6 @@ speaking, which took about 0.07 seconds off Senti's own work after you let go of
 
 The speech model stays loaded so dictation starts fast. On the same Mac the speech server used about
 716 MB of memory with the default model (`footprint`, 13 November 2026).
-
-## Install
-
-You need:
-
-- a Mac with Apple Silicon (M1 or later). The installer stops on any other Mac;
-- [Homebrew](https://brew.sh);
-- [Hammerspoon](https://www.hammerspoon.org), which Senti runs inside. `install.sh` offers to
-  install it with Homebrew if it is missing;
-- the Xcode Command Line Tools (`xcode-select --install`). They are needed once, to build the helper
-  that shows the Microphone permission prompt; `install.sh` builds it only when they are present;
-- about 0.6 GB of disk for the default speech model (574 MB), plus about 80 MB for the Homebrew
-  packages themselves, not counting libraries they pull in (measured 13 November 2026).
-
-The installer does not check the macOS version. Senti was tested on macOS 27.0.1, where the offline
-self-test of this version passed on 17 November 2026.
-
-```bash
-git clone https://github.com/Leonardo-Engineering/Senti.git ~/code/senti
-cd ~/code/senti && ./install.sh
-```
-
-**Update.** Senti has no update check. To update, pull and run the installer again:
-
-```bash
-cd ~/code/senti && git pull && ./install.sh
-```
-
-What `install.sh` does, in order:
-
-1. Checks for `whisper-cpp`, `sox`, `resvg` and Hammerspoon, and offers to install any that are
-   missing with Homebrew (`brew install`, and `brew install --cask hammerspoon`).
-2. Downloads the speech model (574 MB) and checks it against its published SHA-256. A download that
-   does not match is deleted.
-3. Copies Senti's scripts and settings to `~/.config/senti`.
-4. **Replaces `~/.hammerspoon/init.lua`** with Senti's. If you already had your own `init.lua`, it is
-   first saved as `init.lua.pre-senti.<date>-<time>` in the same folder.
-5. Installs a LaunchAgent (`io.senti.server`) that keeps the speech server running on `127.0.0.1`,
-   and `~/Applications/Senti.app`, an on and off switch: opening it starts Senti, and opening it again
-   while Senti runs quits Hammerspoon.
-6. Moves a key file left by an older install into the Keychain (`senti-key.sh migrate`; the file is
-   deleted only after the Keychain copy reads back the same). Then it offers to add an AI key (see
-   below) when none is stored yet. The offer is skipped with `--yes`; the move is not.
-
-Senti also sets Hammerspoon to open at login and hides Hammerspoon's own menu-bar and Dock icons (its
-own icon replaces them). To start Senti after installing, open Hammerspoon or `Senti.app`.
-
-`./install.sh --yes` installs missing pieces without asking. Running it again later updates Senti.
-Put your own settings in `~/.config/senti/config.local.sh`: `install.sh` never overwrites that file.
-`config.sh` holds the defaults and is replaced on every update (the previous one is kept as
-`config.sh.v<N>.bak`). The first update from an older install moves the settings you had added to
-`config.sh` into `config.local.sh` for you, and lists any line it was unsure about there as a comment.
-Your `replacements.txt`, `snippets.txt`, `brain-map.txt` and eval cases are kept.
-
-The [Releases page](https://github.com/Leonardo-Engineering/Senti/releases/latest) has the same
-source. Releases from 1.1.0 on attach a source tarball (`senti-<version>.tar.gz`) and a `SHA256SUMS` file. Check
-your download in the folder you saved both files to:
-
-```bash
-shasum -a 256 -c SHA256SUMS
-```
-
-**Permissions.** Senti runs inside Hammerspoon, so the macOS permission prompts name
-**Hammerspoon**, not Senti:
-
-- **Accessibility** (to see the hold keys and type): usually prompted on first use.
-- **Microphone**: menu-bar icon → *Grant / test microphone* → Allow.
-- **Screen Recording** (only for Context, and for Prompt with screenshots): menu-bar icon → *Grant
-  screen recording*, then relaunch Hammerspoon.
-
-**Language.** English by default. Pick another language, or automatic detection, in the menu bar
-(Language). Detection adds 0.3 to 0.8 seconds to each dictation. Any other Whisper language code works
-as `WF_LANG` in `~/.config/senti/config.local.sh` (`es`, `pt`, `zh`, `yue` and so on; a code Whisper
-does not know falls back to English). The opening phrases that ask for more context in
-Prompt mode ("think hard", "today let's work on") are English only.
-
-**Fast model (optional).** For a faster, English-only model, download it (148 MB) and switch in the
-menu bar (Speed, then Fast). This download is not checksum-verified:
-
-```bash
-curl -L -o ~/.local/share/whisper-models/ggml-base.en.bin \
-  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
-```
-
-**Parakeet (optional).** NVIDIA's Parakeet model runs through the `parakeet-cli` that Homebrew's
-whisper-cpp already installs. Measured on an M3 Pro on 15 November 2026, key-up to text: a 4 second clip took 0.40
-seconds against 0.50 for the default model, a 13 second clip 0.50 against 0.58, and a 21 second clip
-0.62 against 1.09. The gain is mostly on dictations longer than 14 seconds. It detects the language itself among 25 European ones (the Language menu does not steer it, and for any other language Senti uses the default model) and takes no vocabulary hint, so
-project names lean on your `replacements.txt`. Download the model (669 MB), check it, then pick
-Speed, then Parakeet in the menu bar. Senti uses Parakeet for dictations under 30 seconds and the default model for longer ones and whenever
-Parakeet fails or takes longer than 10 seconds (`WF_PARAKEET_TIMEOUT`, 1 to 30). On real recorded speech the 2 engines were close in accuracy; the default model stays the default.
-
-```bash
-curl -L -o ~/.local/share/whisper-models/ggml-parakeet-tdt-0.6b-v3-q8_0.bin \
-  https://huggingface.co/ggml-org/parakeet-GGUF/resolve/main/ggml-parakeet-tdt-0.6b-v3-q8_0.bin
-shasum -a 256 ~/.local/share/whisper-models/ggml-parakeet-tdt-0.6b-v3-q8_0.bin
-# 4d64e9e96c2792186d072fde0034df0ad670cf680a2f53069052ead827fd600e
-```
-
-The model is NVIDIA's `parakeet-tdt-0.6b-v3` (CC-BY-4.0), converted by the whisper.cpp project.
-
-## Add an AI key (optional)
-
-Dictation never needs a key. Prompt, Command and Context use your own key for one of the providers
-below. There are 2 safe ways to add it:
-
-- **The panel.** Menu bar → **AI provider and key…**. It opens by itself once, on the first run with
-  no key. Pick a provider, paste the key, and Senti saves it and checks it against the provider's free
-  model or key list.
-- **The terminal.** Run this and paste the key at the hidden prompt:
-
-  ```bash
-  bash ~/.config/senti/senti-key.sh set openai      # or anthropic, or openrouter
-  ```
-
-  The key is read from the prompt or standard input, never from the command line, so it does not
-  land in your shell history or in the process list.
-
-Keys are stored in your macOS Keychain, encrypted on disk. Senti sends a key only to that provider.
-Programs running as your macOS user can still read it. If the Keychain is locked or unavailable,
-Senti saves the key in a mode-600 file under `~/.config/senti` instead and tells you so.
-
-```bash
-bash ~/.config/senti/senti-key.sh status          # which keys exist, last 4 characters only
-bash ~/.config/senti/senti-key.sh test openai     # checks the key with the provider
-bash ~/.config/senti/senti-key.sh clear openai    # removes it
-```
-
-Never type or paste a key into a command line (an `echo` into a file, for example): it stays in your
-shell history.
 
 ## Bring your own AI
 
