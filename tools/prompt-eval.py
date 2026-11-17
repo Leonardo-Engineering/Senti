@@ -378,8 +378,8 @@ def cmd_mkarm(args):
     copy_tree(os.path.abspath(args.tree), os.path.join(h, ".config", "senti"))
     os.makedirs(os.path.join(h, "Library", "Logs"), exist_ok=True)
     os.makedirs(os.path.join(h, ".cache", "senti"), exist_ok=True)
-    # Claude Code writes the active model into its transcript; senti-target.sh reads it. Plant one per
-    # Claude Code case so the per-model guidance is exercised as on a real Mac.
+    # Claude Code writes the active model into its transcript; senti-target.sh reads it when WF_TARGET_NOTES=1
+    # (off by default since 17 Nov 2026). Plant one per Claude Code case so an arm with the notes on sees them as on a real Mac.
     args.split = "all"
     for c in load_cases(args):
         if c["destination"] == "claude_code":

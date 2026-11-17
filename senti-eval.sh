@@ -77,6 +77,10 @@ load_variant() {   # load_variant <label> → VARS holds the allowed KEY=VALUE p
       *) echo "variant ${1}: ignored key '$k'" >&2 ;;
     esac
   done < "$f"
+  # since 17 Nov 2026 the per-model notes are off unless WF_TARGET_NOTES=1, so a KB variant without it compares base with base
+  case " ${VARS[*]+"${VARS[*]}"} " in
+    *" WF_MODEL_KB="*|*" WF_KB_FALLBACK="*) case " ${VARS[*]+"${VARS[*]}"} " in *" WF_TARGET_NOTES=1 "*) ;; *) echo "variant ${1}: WF_MODEL_KB or WF_KB_FALLBACK has no effect without WF_TARGET_NOTES=1" >&2 ;; esac ;;
+  esac
 }
 
 gen_one() {   # gen_one <dir> <index> <sample> : one generation, in a subshell with the variant

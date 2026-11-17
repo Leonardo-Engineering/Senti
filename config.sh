@@ -181,7 +181,7 @@ WF_AUDIO_CTX_MAX_SEC="${WF_AUDIO_CTX_MAX_SEC:-14}"
 
 WF_OPERATING_PROMPT="${WF_OPERATING_PROMPT:-$HOME/.config/senti/prompts/operating.md}"
 # Per-model prompting notes (prompts/models/). Off by default since 17 Nov 2026: Prompt mode
-# writes the same way for every app. Set WF_TARGET_NOTES=1 in config.local.sh to add the notes
+# writes the same way for every app. Set WF_TARGET_NOTES=1 (exactly 1; any other value means off) in config.local.sh to add the notes
 # for the model in front (senti-target.sh). WF_MODEL_KB and target.pref matter only when it is 1.
 WF_TARGET_NOTES="${WF_TARGET_NOTES:-0}"
 WF_MODEL_KB="${WF_MODEL_KB:-$HOME/.config/senti/prompts/models}"

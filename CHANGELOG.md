@@ -13,8 +13,8 @@ All notable changes to Senti. Dates are in US Eastern time.
   Nov 2026). Rewrites with an addition 0 against 1 of 120, said items lost 0 against 2 of 628, answers
   per requirement 8 better, 3 worse, 49 tied (p 0.23), pairwise answers 11 better, 16 worse, 33 tied
   (p 0.44). The 15 held-back ideas, the screenshot path and long dictations were not rerun without
-  them. Senti's instructions are 0.7 to 2.4 KB shorter. The notes stay in `prompts/models/` for 1
-  release, and `WF_TARGET_NOTES=1` in `config.local.sh` adds them back. The menu's "Written for" row
+  them. Senti's instructions are 0.8 to 3.4 KB shorter (786 to 3,350 bytes, depending on the app; offline build, 17 Nov 2026). The notes stay in `prompts/models/` for 1
+  release, and `WF_TARGET_NOTES=1` (exactly 1) in `config.local.sh` adds them back. The menu's "Written for" row
   now says "any app" when the last prompt carried no notes.
 - If you set `WF_MODEL_KB` or wrote a family to `~/.cache/senti/target.pref`, add `WF_TARGET_NOTES=1`
   to `~/.config/senti/config.local.sh`: both now do nothing unless the notes are on.

@@ -57,7 +57,7 @@ have typed if you had taken the time.
   rewriter's instructions. Leaving them out had no measured effect either way on 60 test ideas (round
   r6, 17 November 2026, 2 samples each, `gpt-6-luna`, M3 Pro; the held-back ideas, the screenshot path
   and long dictations were not rerun without them). They are off for privacy and size: Senti no longer
-  reads Claude Code's session file or Codex's config, and its instructions are 0.7 to 2.4 KB shorter.
+  reads Claude Code's session file or Codex's config, and its instructions are 0.8 to 3.4 KB shorter.
   The other numbers on this page were measured with the notes on. The notes (`prompts/models/*.md`, a
   section per model, 20 in all, written from each lab's own pages) stay in the repo, and a weekly check
   keeps them current (see CONTRIBUTING.md). `WF_TARGET_NOTES=1` in `config.local.sh` adds them back;
@@ -269,7 +269,7 @@ runs on 17 November 2026; version 1.1.1 on the same 20 ideas, run alternately: m
 screenshot it took 1.5 to 2.9 seconds (median 2.0, 10 runs with a synthetic screenshot the same day;
 1.1.1: median 4.4). The new prompts are shorter: about 39 output tokens against about 62, with about
 2,200 input tokens against about 1,500 (with the per-model notes on; without them Senti's
-instructions are 0.7 to 2.4 KB shorter). Almost all of the time is the AI model's own. The screenshot is now shrunk while you are still
+instructions are 0.8 to 3.4 KB shorter). Almost all of the time is the AI model's own. The screenshot is now shrunk while you are still
 speaking, which took about 0.07 seconds off Senti's own work after you let go of the key.
 
 The speech model stays loaded so dictation starts fast. On the same Mac the speech server used about

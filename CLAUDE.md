@@ -239,7 +239,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
     trimming what you send. Prompt caching DOES engage: the system prompt (operating layer +
     craft, + target digest when on) is well over OpenAI's 1,024-token minimum (about 2,200 input tokens per
     text call on 17 Nov 2026 with the notes on, `eval/runs/notes/tokens-r5.txt`; without them the craft
-    block is 0.7 to 2.4 KB shorter, 5.65 KB left; a heavy turn on 13 Nov 2026, with the
+    block is 0.8 to 3.4 KB shorter (786 to 3,350 bytes over the 20 model sections, offline build, 17 Nov 2026), 5.56 KB left; a heavy turn on 13 Nov 2026, with the
     old craft, logged `in=1401 cache_read=1179`).
     Anthropic's minimum is 512 tokens on the 5.5 models, and its system block is marked
     `cache_control`. Keep per-turn content (the fence, the idea) in the user message so the
@@ -252,7 +252,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
   clips and the installed path were not rerun. Off, `senti_build_craft` does not run `senti-target.sh`, so no
   Claude Code transcript or Codex config is read and `last-request.json` has no `target_digest`; the menu's
   "Written for" row then says "any app". `target.pref` and `WF_MODEL_KB` do nothing while off. The craft cache
-  is not keyed on the switch, so a toggle applies within `WF_CTX_TTL_MIN`. On, `senti-target.sh` maps the frontmost app (free, local, no
+  is not keyed on the switch, but ctx- files are swept after every turn, so a toggle applies from the next turn. On, `senti-target.sh` maps the frontmost app (free, local, no
   extra API call) to a knowledge file in `prompts/models/` and injects only that file's
   `## Inject` digest (~900B). Injecting the full research prose instead cost 4.5KB and
   pushed prompt mode to 9.9s — keep the digests small.
