@@ -4,6 +4,8 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ## [Unreleased]
 
+## [1.3.0] 2026-11-17
+
 ### Changed
 
 - Prompt mode no longer adds notes on the destination model to the rewriter's instructions, and Senti
