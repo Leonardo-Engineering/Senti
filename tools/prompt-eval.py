@@ -179,8 +179,8 @@ def format_fails(c, text):
         own = idea_w.lstrip().startswith(pre.group(1).lower() + " ") or (len(first) >= 2 and (" " + " ".join(first) + " ") in idea_w)
         if not own or re.search(r"(?i)\b(here(?:'s| is| are)|below is)\b", lines[0].replace("’", "'")): bad.append("preamble")
     if len(t) > 1 and t[0] in "\"“" and t[-1] in "\"”": bad.append("wrapped in quotes")
-    last = re.split(r"(?<=[.!?:])\s+", lines[-1].strip())[-1]                                  # the writer's own sign-off is the last sentence,
-    off = re.match(r"(?i)[\s\-—–*_>]*(let me know if|hope (?:this|that) helps|feel free to)\b", last)   # not "please let me know" inside the request
+    last = re.split(r"(?<=[.!?])\s+", lines[-1].strip())[-1]                                  # the writer's own sign-off is the last sentence,
+    off = re.match(r"(?i)[\s\-—–*_>(]*(let me know if|hope (?:this|that) helps|feel free to)\b", last)   # not "please let me know" inside the request
     if off and re.sub(r"\s+", " ", off.group(1).lower()) not in c["idea"].lower(): bad.append("closing offer")
     if re.search(r"(?im)^\s*(you are|you're|act as) (a|an|the|my)\b", t.replace("’", "'")) and not re.search(r"(?i)\b(you are|you're|act as|pretend)\b", c["idea"].replace("’", "'")): bad.append("role line")
     if re.search(r"(?m)^\s{0,3}#{1,6}\s+\S", t): bad.append("heading")
@@ -918,7 +918,7 @@ def pairwise(a, b, cases, args):
         vs = [pair_verdict(a, b, c, k) for k in range(1, args.samples + 1)]
         gone = sum(1 for k, v in enumerate(vs, 1) if v is None and read(path("resp", a, c, k, "txt")) and read(path("resp", b, c, k, "txt")))
         u = UNREAD.setdefault((a, b), {})
-        u[c["id"]] = (gone, len(vs))                                              # keyed by case: a second call for the same pair overwrites, never adds
+        u[c["id"]] = (gone, len(vs), sum(1 for v in vs if v is not None))                                              # keyed by case: a second call for the same pair overwrites, never adds
         vs = [v for v in vs if v is not None]
         if not vs:
             ha = any(read(path("resp", a, c, k, "txt")) for k in range(1, args.samples + 1))
@@ -953,9 +953,9 @@ def cmd_compare(args):
     unread = []
     for b in dict.fromkeys(args.arms):
         u = UNREAD.get((new, b), {})
-        part = sum(1 for g, n in u.values() if 0 < g < n)
-        whole = sum(1 for g, n in u.values() if g and g == n)
-        if (part or whole) and whole < len(u):                                    # every case unread = the comparison never ran; the table says so
+        part = sum(1 for g, n, r in u.values() if g and r)
+        whole = sum(1 for g, n, r in u.values() if g and not r)
+        if (part or whole) and any(r for g, n, r in u.values()):                                    # no readable verdict at all = the comparison never ran
             unread.append("%s %d decided on the other sample, %d left out" % (b, part, whole))
     if unread:
         print("  cases with a pairwise verdict that could not be read: " + "; ".join(unread))
