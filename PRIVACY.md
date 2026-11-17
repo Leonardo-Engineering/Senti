@@ -191,7 +191,7 @@ with your Keychain items, and about the speech models. See the README's Uninstal
 
 ## Changes
 
-- **17 November 2026 (unreleased):** Prompt mode no longer adds per-model notes by default, so Senti no
+- **17 November 2026 (1.3):** Prompt mode no longer adds per-model notes by default, so Senti no
   longer reads Claude Code's session file or Codex's config, and no model guidance goes in a request.
   `WF_TARGET_NOTES=1` in `config.local.sh` turns both back on. A notes digest on a heavy turn is now
   introduced to the rewriter as reference only; what it sends is unchanged.
