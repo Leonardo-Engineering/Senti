@@ -190,6 +190,10 @@ with your Keychain items, and about the speech models. See the README's Uninstal
 
 ## Changes
 
+- **17 November 2026 (1.2):** What Prompt mode sends is unchanged. The rewriter is now told to use the
+  screenshot and any notes only to name what "this" points at and to spell a name. This page now says
+  that the eval scripts in the repo call OpenAI (`gpt-6-luna`) for their judges whatever provider you
+  chose.
 - **15 November 2026 (1.1):** The Prompt screenshot is of the focused window, not the whole display.
   Session memory is recalled only for the same project, not just the same window. Command mode no longer reads the selection of a window you moved to after
   speaking, so that text is not sent. Context mode without a screenshot keeps your words on the
