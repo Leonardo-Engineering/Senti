@@ -244,7 +244,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
     `cache_control`. Keep per-turn content (the fence, the idea) in the user message so the
     system prefix stays byte-stable.
   - Prepends `prompts/operating.md` when `WF_OPERATING_LAYER=1`.
-- **Per-model notes (injected; effect on the prompt not measured: 1 copied line in 144 agent rewrites on 16 Nov 2026, no notes-off arm):** `senti-target.sh` maps the frontmost app (free, local, no
+- **Per-model notes (injected; effect on the prompt not measured: 1 scope line the notes recommend in 144 agent rewrites on 16 Nov 2026, no notes-off arm):** `senti-target.sh` maps the frontmost app (free, local, no
   extra API call) to a knowledge file in `prompts/models/` and injects only that file's
   `## Inject` digest (~900B). Injecting the full research prose instead cost 4.5KB and
   pushed prompt mode to 9.9s — keep the digests small.

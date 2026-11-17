@@ -58,8 +58,8 @@ have typed if you had taken the time.
   terminal Senti reads the model name from Claude Code's session file. All of this is local and costs
   no extra API call. The notes for that model (`prompts/models/*.md`, a section per model, 20 in all,
   written from each lab's own pages with the links and dates beside them) still reach the rewriter,
-  introduced as guidance to apply. In the tests the rules above won: an earlier revision copied a line
-  from the notes into 1 of 144 rewrites for coding agents (16 November 2026), and of 3 ideas tried
+  introduced as guidance to apply. In the tests the rules above won: an earlier revision added a scope
+  line that the notes recommend to 1 of 144 rewrites for coding agents (16 November 2026), and of 3 ideas tried
   that day for Claude Code, ChatGPT and Codex (1 sample each, an earlier revision), 2 gave the same
   text for all 3 and the third differed by 2 words. So expect much the same prompt whichever app is in
   front. A weekly check keeps the notes current (see CONTRIBUTING.md).

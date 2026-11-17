@@ -37,7 +37,7 @@ User settings live in `config.local.sh`, which nothing overwrites. If you change
    them.
 4. If you changed Prompt mode (`prompts/prompt-craft.md`, `prompts/models/`, `senti-prompt.sh`,
    `senti-vision.sh`, `senti-target.sh`, `senti-lib.sh`), measure it. See
-   [Measuring Prompt mode](#measuring-prompt-mode). It calls OpenAI and costs well under a dollar for
+   [Measuring Prompt mode](#measuring-prompt-mode). It calls OpenAI (and your chosen provider for Senti's own rewrites) and costs well under a dollar for
    1 variant.
 
 ## Rules the code depends on
