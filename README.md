@@ -12,14 +12,14 @@ Free, local speech-to-text for macOS.</p>
 <p align="center"><a href="https://github.com/Leonardo-Engineering/Senti/actions/workflows/ci.yml"><img src="https://github.com/Leonardo-Engineering/Senti/actions/workflows/ci.yml/badge.svg" alt="CI status"></a></p>
 
 Hold a key and speak. Senti types what you said into the app you are in, or turns a rough spoken
-idea into a prompt written for the AI model you are about to paste it into. Dictation runs on your
+idea into a clean prompt that keeps what you said and is told to add nothing. Dictation runs on your
 Mac and your audio never leaves it.
 
 Senti is free and MIT licensed, with no account.
 
 *Senti* is Italian for "listen."
 
-**Contents:** [Prompt mode](#prompt-mode-a-prompt-written-for-where-it-is-going) · [Modes](#modes) · [Speed](#speed) · [Install](#install) · [AI key](#add-an-ai-key-optional) · [Models](#bring-your-own-ai) · [Second brain](#second-brain) · [Privacy](#privacy-and-security) · [Uninstall](#uninstall) · [How it works](#how-it-works) · [Config](#config)
+**Contents:** [Prompt mode](#prompt-mode-what-you-said-written-with-care) · [Modes](#modes) · [Speed](#speed) · [Install](#install) · [AI key](#add-an-ai-key-optional) · [Models](#bring-your-own-ai) · [Second brain](#second-brain) · [Privacy](#privacy-and-security) · [Uninstall](#uninstall) · [How it works](#how-it-works) · [Config](#config)
 
 ## What it looks like
 
@@ -34,32 +34,44 @@ captured from the app's own window.
 The "AI provider and key" panel opens from the menu bar on first run. Dictation needs no key. This
 image is rendered from the panel's own HTML in a browser.
 
-## Prompt mode: a prompt written for where it is going
+## Prompt mode: what you said, written with care
 
-Hold right ⌘, say what you want in your own words, and let go. Senti writes a prompt and pastes it
-at your cursor.
+Hold right ⌘, say what you want in your own words, and let go. Senti pastes the message you would
+have typed if you had taken the time.
 
-- **It writes for the model in front of you.** Ask for the same thing in Claude and in ChatGPT and
-  the prompts differ, because each follows that model's own guidance. Models from one lab differ too:
-  OpenAI's guide for its largest model says to describe the goal and leave out the recipe, while its
-  smallest model does better when told the exact output shape; Anthropic documents each current Claude
-  model on its own page. So the knowledge in `prompts/models/*.md` has a section per model, 20 in all
-  (6 Claude, of which 4 are current, 5 OpenAI, 2 Gemini, Grok, Kimi, Mistral, Qwen, GLM, DeepSeek,
-  MiniMax), written from that lab's own pages
-  with the source links and the date beside it. Edit those files and the behavior changes.
+- **It is told to keep what you said.** Numbers, names, files, conditions ("only if", "unless"),
+  prohibitions, hedges ("maybe", "about") and commitments ("I'll") are to come through at the strength
+  you said them. Spoken forms are written out ("twenty point eleven" becomes 20.11, "login dot ts"
+  becomes `login.ts`), your order is kept, and a self-correction leaves only the final value. In the
+  tests it lost 4 of 778 such items; what it still gets wrong is listed under "How it was measured".
+- **It is told to add nothing.** No role line, no tone, no output format, no "add tests", no step
+  you did not ask for. A destination obeys what the prompt says, so an invented requirement is work
+  nobody wanted. In the tests below it still added something in 3 of 150 rewrites as judged (6 to 9
+  read by hand); version 1.1.1 did in 139 as judged.
+- **It leaves a clear prompt alone.** A request that is already complete comes back as you said it
+  (the same words in the same order in 10 of 10 test runs, 17 November 2026).
+- **It says what is undecided.** When the idea names no result or no target at all ("fix it
+  somehow"), the rewriter is told to end with an `Open questions:` line that states what was not said,
+  and not to guess. In the tests 8 of the 10 rewrites of vague ideas got one.
 - **It knows where you are.** Senti reads the name of the app in front and its window title. ChatGPT
   resolves to the model ChatGPT runs and Codex to the model in Codex's own config; in a Claude Code
   terminal Senti reads the model name from Claude Code's session file. All of this is local and costs
-  no extra API call.
-- **It stays current.** A weekly check compares the list with what the labs have released and opens
-  an issue when a model is new, gone or missing its section (see CONTRIBUTING.md).
+  no extra API call. The notes for that model (`prompts/models/*.md`, a section per model, 20 in all,
+  written from each lab's own pages with the links and dates beside them) still reach the rewriter,
+  introduced as guidance to apply. In the tests the rules above won: an earlier revision copied a line
+  from the notes into 1 of 144 rewrites for coding agents (16 November 2026), and of 3 ideas tried
+  that day for Claude Code, ChatGPT and Codex (1 sample each, an earlier revision), 2 gave the same
+  text for all 3 and the third differed by 2 words. So expect much the same prompt whichever app is in
+  front. A weekly check keeps the notes current (see CONTRIBUTING.md).
 - **It can see your screen.** With **Use a screenshot in Prompt** on (the default), Prompt mode also
-  sends a downscaled screenshot so the prompt fits what you are working on. Turn it off in the menu
+  sends a downscaled screenshot. The rewriter is told to use it for 2 things only: to name what
+  "this" or "here" points at, and to spell a name or file that is visible, and never to add a task.
+  With 1 unrelated screenshot in the tests, nothing from it got into a prompt. Turn it off in the menu
   bar for text only.
 - **It remembers each window, when you ask it to.** A session is a window, so 4 Claude Code terminals
   are 4 separate contexts. Open a turn with **"think hard"** or **"today let's work on"** and Senti
-  adds the window title's project and task and your recent turns in that window. Every other turn
-  stays lean and sends none of that.
+  adds the window title's project and task and your recent turns in that window, to settle what
+  "this" means and how a misheard name is spelled. Every other turn stays lean and sends none of that.
 - **It can use your notes, if you turn that on.** If you keep an Obsidian vault or Notion pages, a
   heavy turn can add a short digest of your notes for the project you are in. See
   [Second brain](#second-brain).
@@ -67,12 +79,129 @@ at your cursor.
 Every AI mode also gets `prompts/operating.md` prepended, a short set of rules that keeps the output
 brief.
 
+### How it was measured
+
+On 16 and 17 November 2026, 75 spoken ideas (15 kinds, 5 destinations, written in transcript style)
+went through this version, through Senti 1.1.1, and through 7 prompts that other tools publish, all
+on the same model (`gpt-6-luna`), 2 samples each, on an M3 Pro. Counts are rewrites out of 150 unless
+a column says otherwise. The method, and how to run it, are in CONTRIBUTING.md under
+"Measuring Prompt mode".
+
+| Rewriter | Added something not said | Said items lost (of 778) | Checks for a withdrawn, misheard or wrong value that fired (of 74) | Fits the destination's shape | Clear prompt kept (of 10) | Answers compared with Senti's: Senti better, other better, tied (75 ideas) |
+|---|---|---|---|---|---|---|
+| **Senti, this version** | 3 | 4 | 1 | 150 | 10 | |
+| Senti 1.1.1 | 139 | 20 | 1 | 114 | 0 | 28, 15, 32 |
+| No rewrite (the transcript itself) | 1 of 75 | 0 of 389 | 14 of 37 | 75 of 75 | 5 of 5 | 19, 22, 34 |
+| Handy, "Improve Transcriptions" | 2 | 0 | 19 | 150 | 10 | 25, 15, 35 |
+| OpenWhispr, cleanup prompt | 4 | 2 | 11 | 150 | 10 | 21, 9, 45 |
+| Kilo Code, enhance prompt | 115 | 17 | 4 | 150 | 0 | 29, 12, 34 |
+| GolfCloud's "Codex" mode for Superwhisper | 86 | 28 | 2 | 150 | 2 | 26, 18, 31 |
+| Roo Code, enhance template | 122 | 29 | 6 | 150 | 0 | 45, 7, 23 * |
+| Prompt Boost for GitHub Copilot | 145 | 24 | 7 | 11 | 0 | 42, 5, 28 * |
+| OpenAI's prompt-generation meta-prompt | 149 of 149 | 25 | 14 | 18 | 0 | 43, 10, 22 * |
+
+What the columns count:
+
+- **Added something not said.** A judge that was shown the speech listed at least 1 addition. An
+  `Open questions:` line is not counted, because it is the place for what is undecided. Only Senti
+  writes one: in 10 of 150 rewrites, 2 of them on a request that was not vague and did not need it.
+  The judge misses some additions; see the hand count below.
+- **Said items lost.** A check in code that each number, name, path, condition word and hedge of the
+  idea is still there. It checks presence, not meaning: a prohibition turned around would pass. A
+  judge checks meaning separately; it caught 12 of 12 planted ones and missed 1 real one (below).
+- **Checks for a withdrawn, misheard or wrong value that fired.** Each check looks for a value the
+  speaker took back ("three, no wait, five"), a joke instruction they walked back, a name the
+  recognizer misheard, or a number written wrongly, still in the rewrite. The unit is checks, not
+  values: 2 checks can cover 2 spellings of 1 value, and a value named only to rule it out ("not June
+  6") still fires. 10 of the 75 ideas are turns where the right name is only in the window title.
+  Senti sees that title on those turns; of the published prompts only GolfCloud's has a place for it
+  and was given it. The others were not, which is how those tools work, and it accounts for part of
+  their count here.
+- **Fits the destination's shape.** No XML tag (except around material the speaker will paste,
+  outside Codex and ChatGPT), heading, bold label, role line, preamble, closing offer, code fence or
+  quotes around the whole text, no request to share a file with a coding agent, and no bullet list or
+  checklist label in ChatGPT.
+- **Clear prompt kept.** 5 prompts that were already good, 2 samples each: 90% or more of the words
+  come back in order and the result is at most 15% longer. The same words in the same order: this
+  version 10 of 10, OpenWhispr 8, Handy 6.
+
+What this shows, and what it does not:
+
+- **It is the only rewriter here that is low on every faithfulness column at once.** Handy adds
+  less (2) and loses nothing, but keeps 19 of 74 withdrawn, misheard or wrong values (OpenWhispr 11).
+  The prompts that expand a request add something in 86 to 149 of 150 rewrites.
+- **What it still gets wrong, read by hand.** 2 of its 4 lost items are honest rewordings. The
+  other 2, the 1 withdrawn value and 2 of the 3 judged additions are 1 idea, a correction inside a
+  range ("from 26 to 28, no hold on, 30" came out as "from 30 to 30" and "from 30 to 28"). The third
+  judged addition turned "go by how long a game takes first" into "Rank them by how long a game takes
+  first". The
+  judge missed 3 more additions: a `$` on an amount said without a unit (2 rewrites) and a task word
+  taken from the window title (1). Counting those, the additions are 6 of 150, and 9 if a unit carried
+  over from earlier in the sentence also counts ("worth two hundred" after "a fifty dollar credit").
+  It also merged 2 separate exclusions into 1 clause in 2 rewrites, and left "the reply to this"
+  unresolved in 2.
+- **The answers.** A stand-in for the destination answered every rewrite, and the answers were
+  compared head to head against the speaker's full intent. A star marks a lead that holds after
+  correcting for 10 comparisons (the 9 in the table and 1 fixed skeleton we wrote ourselves, not shown
+  because it is nobody's published prompt). This version is ahead of the 3 starred prompts. Against
+  1.1.1 the count is 28 to 15 (p = 0.07, not a result; 3 earlier revisions of the same instructions
+  scored 30 to 11, 30 to 16 and 26 to 15). Against Kilo Code (29 to 12) and OpenWhispr (21 to 9) the
+  gap is below 0.05 before the correction and not after it. Against GolfCloud (26 to 18), Handy (25 to
+  15) and no rewrite at all (19 to 22) there is no result. The same version scored twice differs by 17
+  to 19, so gaps of that size mean nothing.
+- **Why level is the ceiling.** A rewrite written with the speaker's full intent in hand scored 16
+  to 11 against the raw transcript, which is also no result. A capable destination copes with a spoken
+  request. A rewriter earns its place by doing no harm, by writing values and names correctly, and by
+  naming what was left open, not by making a clear request "better". 1.1.1 lost to the raw transcript
+  12 to 32.
+- **Tuning ideas and held-back ideas.** 15 variants of the instructions were tried on 60 of
+  the ideas. The other 15 were held back from tuning. They were not untouched: 3 earlier revisions
+  were also scored on them, and after a reviewer named 1 held-back idea, 2 revisions of the rule about
+  "this" after "think hard" quoted its opening words (1 of those was scored on it). The wording was
+  changed, and that idea no longer counts as unseen. Side by side, this version (1.1.1 in brackets):
+
+  | | 60 tuning ideas | 15 held-back ideas |
+  |---|---|---|
+  | Added something not said | 1 of 120 (111) | 2 of 30 (28) |
+  | Said items lost | 2 of 628 (18) | 2 of 150 (2) |
+  | Withdrawn, misheard or wrong values kept | 0 of 62 (0) | 1 of 12 (1) |
+  | Fits the destination's shape | 120 of 120 (89) | 30 of 30 (25) |
+  | Requirements met by the destination's answer | 93.2% (90.4%; no rewrite 91.5%) | 91.3% (99.3%; no rewrite 98.1%) |
+  | Answers head to head against 1.1.1 | 25, 11, 24 | 3, 4, 8 |
+
+  On the held-back ideas the gap in additions is still clear (fewer than 1.1.1 in 14 ideas, more in
+  none; sign test p = 0.0001; read by hand this version's count is 3 of 30, the third being the title
+  word). Lost items are level with 1.1.1 (this version's are all in the range idea). The gaps in shape
+  and in the answers are not a result at 15 ideas, and the answers lean the other way.
+- **Published prompts, not products.** Each prompt was fetched from its own repository or page on 16
+  November 2026 and run on `gpt-6-luna`, not on the model its tool uses. Handy and OpenWhispr are
+  dictation cleaners and were never meant to write prompts; OpenAI's meta-prompt is written to produce
+  system prompts. GolfCloud's mode runs inside Superwhisper, whose own request format is not public,
+  so its input here (the speech as "User Message", the app and window title as "Application Context")
+  is our assembly. A tool can behave differently from its prompt. Sources: Handy
+  `src-tauri/src/settings.rs` (4a096e3), OpenWhispr `src/locales/en/prompts.json` (522c14e), Kilo
+  Code `packages/opencode/src/kilocode/enhance-prompt.ts` (12b44cb), Roo Code
+  `src/shared/support-prompt.ts` (cf5d42e), GolfCloud `superwhisper-toolkit/prompts/codex.xml`
+  (b0a52c4), Prompt Boost `src/promptBoost.ts` (a51923c), and
+  developers.openai.com/api/docs/guides/prompt-generation.
+- **Limits.** The destination was a stand-in (the same small model writing a plan or an answer), not
+  a real agent run. The ideas were written, not recorded. The judges were the same model, shown the
+  speech (and, for the answers, the speaker's full intent) and never told which rewriter wrote a text.
+- **With a screenshot.** The same 75 ideas with 1 unrelated, tempting screenshot (a planning document
+  with its own to-do lines): this version was judged to add something in 1 of 150 rewrites, 1.1.1 in
+  148 of 150, and clear prompts came back with the same words in the same order in 9 of 10. Nothing
+  from the screenshot got into this version's prompts (1.1.1 copied a function name and to-do lines
+  from it into some). The 1 flagged rewrite is worse than an addition: "not for
+  Alaska and Hawaii, and not when the package is over twenty pounds" came out as "except for Alaska
+  and Hawaii, and when the package is over 20 pounds", which turns the second exclusion around, and the
+  judge that checks meaning passed it. Whether a relevant screen helps was not measured.
+
 ## Modes
 
 | Gesture | Mode | What it does |
 |---|---|---|
 | Hold **right ⌥** | **Dictate** | Types exactly what you say. Fully local. |
-| Hold **right ⌘** | **Prompt** | Turns a rough spoken idea into a prompt for the model you are about to paste into. Adds a screenshot when that setting is on and Hammerspoon has Screen Recording permission; otherwise text only. |
+| Hold **right ⌘** | **Prompt** | Turns a rough spoken idea into a clean prompt that keeps what you said and is told to add nothing. Adds a screenshot when that setting is on and Hammerspoon has Screen Recording permission; otherwise text only. |
 | Hold **Fn** | **Command** | Transforms the text you selected by voice ("make this a bullet list", "fix the grammar"). Sends your words and the selection. With no selection there is nothing to edit, so it writes a prompt from what you said, exactly as right ⌘ does. |
 | **⌃⌥V** | **Context** | Takes a screenshot plus your instruction, then drafts a reply, edit or answer at the cursor. Press it, speak, and press it again to stop. |
 | `⌃⌥D` / `⌃⌥P` / `⌃⌥C` | Toggles | Hands-free versions of Dictate, Prompt and Command. |
@@ -121,9 +250,11 @@ from letting go of the key until the text is ready to paste:
 - on the Fast model (`base.en`), 0.2 to 0.4 seconds in the same day's tests, measured before this
   release's speedups.
 
-A prompt rewrite with `gpt-6-luna` took about 2 seconds without a screenshot (median of 5 runs). With
-a screenshot it took 1.9 to 3.1 seconds (median 2.5, 15 runs with a synthetic screenshot, 14 November
-2026). Almost all of that is the AI model's own time. The screenshot is now shrunk while you are still
+A prompt rewrite with `gpt-6-luna` took 1.5 to 3.0 seconds without a screenshot (median 1.7, 20
+runs on 17 November 2026; version 1.1.1 on the same 20 ideas, run alternately: median 2.4). With a
+screenshot it took 1.5 to 2.9 seconds (median 2.0, 10 runs with a synthetic screenshot the same day;
+1.1.1: median 4.4). The new prompts are shorter: about 39 output tokens against about 62, with about
+2,200 input tokens against about 1,500. Almost all of the time is the AI model's own. The screenshot is now shrunk while you are still
 speaking, which took about 0.07 seconds off Senti's own work after you let go of the key.
 
 The speech model stays loaded so dictation starts fast. On the same Mac the speech server used about
@@ -332,9 +463,13 @@ bash ~/.config/senti/senti-key.sh test openai --model gpt-6.1-terra   # look for
 
 ## Second brain
 
-Prompt mode can ground a heavy turn (one that opens with "think hard" or "today let's work on") in
-your own notes. There are 2 sources, Obsidian and Notion. Both are off until you turn them on, and you
-can use either or both. No other turn sends anything from your notes.
+Prompt mode can send a short digest of your own notes with a heavy turn (one that opens with "think
+hard" or "today let's work on"). There are 2 sources, Obsidian and Notion. Both are off until you turn
+them on, and you can use either or both. No other turn sends anything from your notes. Since 17
+November 2026 the rewriting rules say to use reference context, notes included, for 2 things only: to
+name what "this" points at and to spell a name, and to add nothing you did not say. The digest itself
+is still introduced to the rewriter as your own notes, to be trusted over guesses, so it is told both
+things. What that does to a prompt when a note digest is present has not been measured yet.
 
 **Obsidian.** Senti reads only the vault folders you list, so don't list one that holds notes about
 people. It picks the note for the project in the window title and sends its `## Senti` section if it
@@ -350,7 +485,8 @@ WF_BRAIN_DIRS=$'Projects\nWork'   # vault folders Senti may read, one per line
 
 `WF_BRAIN_RETRIEVE=1` also adds one more note from the same project folder: the one whose words best
 match what you said, found by a keyword search on your Mac (nothing is indexed to disk), capped at
-700 bytes. It is off by default. On 12 test requests over a sample vault it put a fact from the
+700 bytes. It is off by default. On 14 November 2026, with the earlier instructions (which let a
+note's facts into the prompt), on 12 test requests over a sample vault it put a fact from the
 right note into 28 of 33 prompts (3 of 33 without it), but a judge that compares prompts without
 seeing the notes preferred the prompts without it: 2 wins, 29 losses, 5 ties, against 11 wins, 17
 losses and 8 ties for the same setup compared with itself.
@@ -451,7 +587,8 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 - `senti-prompt.sh`: Prompt mode without a screenshot.
 - `senti-vision.sh`: Context, and Prompt with a screenshot.
 - `senti-command.sh`: transforms selected text.
-- `senti-judge.sh` / `senti-eval.sh`: prompt-quality judge and offline eval harness.
+- `tools/prompt-eval.py` with `eval/cases2.jsonl` (repo only): measures Prompt mode. See CONTRIBUTING.md.
+- `senti-judge.sh` / `senti-eval.sh`: the older prompt judge and harness, kept for their history.
 - `senti-selftest.sh`: the check suite. `--ci` runs it offline from a checkout.
 - `senti-model.sh`: switches the speech model (Accurate, Fast, Parakeet) and the language.
 - `senti-config.sh`: installs the default settings and carries yours into `config.local.sh`.
@@ -468,7 +605,8 @@ holds the defaults and their explanations, and every update replaces it. Common 
 (`WF_SILENCE_THOLD`, default 0.005) and the operating layer (`WF_OPERATING_LAYER=0` turns it off). The
 language is set in the menu bar; a `WF_LANG` line overrides the menu. Edit
 `replacements.txt` for vocabulary fixes (for example "cloud md" to `CLAUDE.md`) (each line is what Senti hears, a `|`, and what to type; case does not matter and a rule fires only on a whole word) and
-`eval/cases.txt` for eval cases.
+`eval/cases.txt` for the older eval's cases (Prompt mode is measured with `eval/cases2.jsonl` in the
+repo; see CONTRIBUTING.md).
 
 `snippets.txt` holds phrases that type a fixed text when you say them on their own, one per line as
 `what you say | what to type` (`\n` is a line break). Add a line such as `my email | you@example.com`, say "my email" alone while dictating (right ⌥), and

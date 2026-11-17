@@ -4,6 +4,72 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ## [Unreleased]
 
+### Changed
+
+- Prompt mode now writes what you said and is told to add nothing. It cleans the speech, writes spoken numbers,
+  paths and names in their normal form, keeps your order, your conditions and prohibitions, your
+  hedges ("maybe", "about") and your commitments ("I'll"), and leaves only the final value of a
+  self-correction. An already clear prompt comes back as you said it. When the idea names no result
+  or no target at all, it is told to end with an `Open questions:` line that states what was not said,
+  and not to guess (8 of the 10 rewrites of vague ideas got one). Words you address to Senti about the prompt ("ask it for 2 versions") are
+  followed, not copied. Before, the 3 worked examples in `prompts/prompt-craft.md` each invented
+  content (a role, a legal argument, "top 3-5 trends", a kill switch) and the rewriter copied them.
+  Measured on 16 and 17 Nov 2026 on 75 written spoken ideas, 2 samples each, `gpt-6-luna`, on an M3
+  Pro (`tools/prompt-eval.py`, method in CONTRIBUTING.md), 1.1.1 against this version: rewrites that
+  added something the speaker did not say, 139 of 150 against 3 of 150 as judged (6 to 9 of 150 read
+  by hand, see below); said items lost (numbers, names, condition words, hedges), 20 of 778 against 4
+  of 778; checks for a withdrawn, misheard or wrong value that fired, 1 of 74 against 1 of 74;
+  rewrites wrapped in XML tags or opened with a role line, 36
+  of 150 against 0; clear prompts kept (90% or more of the words, in order), 0 of 10 against 10 of 10,
+  all 10 with the same words in the same order. The `Open questions:` line appears in 10 of 150
+  rewrites, 2 of them on requests that were not vague. Still wrong: a correction inside a range ("from
+  26 to 28, no hold on, 30"), in both samples of the 1 held-back idea that has it; a `$` put on an
+  amount said without a unit (2 rewrites) and a task word taken from the window title (1), which the
+  judge did not count, so by hand the additions are 6 of 150, or 9 if a unit carried over from earlier
+  in the sentence counts; 2 separate exclusions merged into 1 clause (2 rewrites). On the 15 held-back
+  ideas alone: additions 2 of 30 (1.1.1: 28), said items lost 2 of 150 (1.1.1: 2). The held-back ideas
+  were scored for 3 earlier revisions too, and 1 of them no longer counts as unseen (see the README).
+- Expect much the same prompt whichever app is in front. The per-model notes still reach the
+  rewriter, introduced as guidance to apply, and in the tests the new rules won: an earlier revision
+  copied a line such as "keep the changes in scope" into 1 of 144 rewrites for coding agents, and of 3
+  ideas tried for Claude Code, ChatGPT and Codex with an earlier revision on 16 Nov 2026, 2 gave the
+  same text for all 3 and 1 differed by 2 words. A version that shaped the prompt per destination
+  (plain sentences for Claude Code, word labels for Codex, a placeholder for pasted material) was
+  built and measured the same day: it scored no better (3 ideas better, 5 worse, 52 tied on the
+  destination's answers), so it is not in this release.
+- The rewriter is now told to use Prompt mode's screenshot for 2 things only: to name what "this" or
+  "here" points at, and to spell a name or file that is visible, and never to add a task. With 1 unrelated, tempting screenshot
+  on the same 75 ideas, rewrites that added something went from 148 of 150 to 1 of 150 (16 and 17 Nov
+  2026), and nothing from the screenshot got into this version's prompts. That 1 rewrite turned an exclusion around
+  ("not when the package is over twenty pounds" became "and when the package is over 20 pounds").
+  The same rule now applies to a digest of your Obsidian or Notion notes; its effect on a prompt
+  with notes present was not measured.
+- Prompt mode is faster: median 1.7 seconds against 2.4 for 1.1.1 without a screenshot (20 runs
+  each, run alternately, 17 Nov 2026, M3 Pro) and 2.0 against 4.4 with one (10 runs each). It also
+  writes less, about 39 output tokens a prompt against about 62, and reads more, about 2,200 input
+  tokens against about 1,500. What made it faster was not isolated.
+- Not measured as better: the answers a destination gives. A stand-in destination answered every
+  rewrite and the answers were compared head to head over the 75 ideas (wins, losses; the rest tied).
+  This version was ahead of 3 published prompts that expand a request: Roo Code 45 to 7, Prompt Boost
+  42 to 5, OpenAI's meta-prompt 43 to 10. Against version 1.1.1 the count was 28 to 15, against Kilo
+  Code 29 to 12, against OpenWhispr's cleanup prompt 21 to 9: none of those is a clear result after
+  correcting for 10 comparisons. Against GolfCloud's Codex mode (26 to 18), Handy's cleanup prompt (25
+  to 15) and no rewrite at all (19 to 22) there is no result either. The same version compared with
+  itself gives 17 to 19. On the 15 held-back ideas the answers did not favour this version
+  (requirements met 91.3%, 1.1.1 99.3%, no rewrite 98.1%; not a result at 15 ideas). The README has
+  the tables.
+
+### Added
+
+- `tools/prompt-eval.py` and `eval/cases2.jsonl` (repo only): an eval for Prompt mode that checks in
+  code whether what was said is still present, judges additions against the speech, and scores a
+  stand-in destination's answer against the speaker's written intent. It catches planted defects (an
+  added requirement in 74 of 75, a deleted clause in 73 of 75 by the judge and 75 of 75 in code, a
+  prohibition turned around in 12 of 12, a withdrawn value put back in 9 of 10 by the judge and 10 of
+  10 in code; 16 Nov 2026). On real output the judge missed 1 exclusion that was turned around.
+  `bash senti-selftest.sh --ci` runs its case check, which also fails when a worked example in the
+  craft contains a content word its own rough text lacks.
+
 ### Fixed
 
 - An answer that lost its closing tag after a short preamble ("Sure, here it is: <r>…") is pasted
