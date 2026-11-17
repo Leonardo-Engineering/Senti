@@ -4,6 +4,8 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ## [Unreleased]
 
+## [1.2.0] 2026-11-17
+
 ### Changed
 
 - Prompt mode now writes what you said and is told to add nothing. It is told to clean the speech, write
