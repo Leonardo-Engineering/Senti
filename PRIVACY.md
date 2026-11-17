@@ -5,14 +5,14 @@ The 3 AI modes (Prompt, Command and Context) send text, and sometimes a screensh
 provider you chose, and only when you use them.
 
 This page lists exactly what leaves your Mac, what Senti reads, what it stores and for how long. It
-describes the code in this repository as of 15 November 2026.
+describes the code in this repository as of 17 November 2026.
 
 ## What leaves your Mac
 
 | Mode | What is sent | Where |
 |---|---|---|
 | **Dictate** (hold right ⌥) | Nothing. The audio goes to the speech server on `127.0.0.1`, on your Mac. | nowhere |
-| **Prompt** (hold right ⌘) | Your words. Senti's own instructions (from `prompts/`), including guidance for the model you are about to paste into, which names that model. A downscaled screenshot when **Use a screenshot in Prompt** is on (the default) and Hammerspoon has Screen Recording permission. | your provider |
+| **Prompt** (hold right ⌘) | Your words. Senti's own instructions (from `prompts/`). With `WF_TARGET_NOTES=1` only (off by default), guidance for the model you are about to paste into, which names that model. A downscaled screenshot when **Use a screenshot in Prompt** is on (the default) and Hammerspoon has Screen Recording permission. | your provider |
 | **Prompt, heavy turn** | Everything above, plus fenced blocks of context: the project and task from the window title, this window's recent Senti turns, and your notes digests if notes are on. See the next section. | your provider |
 | **Prompt, heavy turn, Notion on** | A read of the Notion page you mapped to this project. The request carries the page id and your Notion token, nothing from your speech, screen or window title. | `api.notion.com` |
 | **Command** (hold Fn) | With text selected: your words and that text, no screenshot. With nothing selected it works as Prompt mode and sends what Prompt mode sends. | your provider |
@@ -110,12 +110,13 @@ Some of this is sent, as the tables above say. The rest never leaves the Mac.
 - The last result is kept in memory for 5 minutes so `⌃⌥L` can paste it again. It is never written to
   disk or to the log, and it is forgotten when the screen locks.
 
-- The name of the app in front and its window title. The title picks the model guidance and, on
-  heavy turns only, supplies the project and task listed above.
-- The last 120 KB of the newest Claude Code session file for the project in the title
+- The name of the app in front and its window title. On heavy turns only, the title supplies the
+  project and task listed above. With `WF_TARGET_NOTES=1` the app and title also pick the model
+  guidance.
+- Only with `WF_TARGET_NOTES=1` (off by default): the last 120 KB of the newest Claude Code session file for the project in the title
   (`~/.claude/projects/...`), to learn which Claude model you are using. Only the model name can
   reach a prompt, inside the model guidance.
-- When Codex is the app in front: the `model` line of `~/.codex/config.toml`, to learn which OpenAI
+- Only with `WF_TARGET_NOTES=1`, when Codex is the app in front: the `model` line of `~/.codex/config.toml`, to learn which OpenAI
   model Codex is set to. Nothing else in that file is read, and only the model name can reach a prompt.
 - The git branch of `~/code/<project>`, read from `.git/HEAD`, plus your `replacements.txt`. These
   become a short spelling hint for the local speech server and never leave the Mac.
@@ -159,7 +160,7 @@ devices. That option is set and checked on this Mac; it has not been confirmed w
 The menu bar has **AI → What the last AI request sent**. It shows the contents of
 `last-request.json`: when it ran, the mode, the provider and host, the model and effort, whether a
 screenshot went along, and each part of the request by source (speech, selection, window title,
-session, notes, model guidance) with its character count. It shows the note's file name and the
+session, notes, model guidance when the notes are on) with its character count. It shows the note's file name and the
 target model's name, never the text. Dictation never writes to it.
 
 ## Turning things off
@@ -190,6 +191,10 @@ with your Keychain items, and about the speech models. See the README's Uninstal
 
 ## Changes
 
+- **17 November 2026 (unreleased):** Prompt mode no longer adds per-model notes by default, so Senti no
+  longer reads Claude Code's session file or Codex's config, and no model guidance goes in a request.
+  `WF_TARGET_NOTES=1` in `config.local.sh` turns both back on. A notes digest on a heavy turn is now
+  introduced to the rewriter as reference only; what it sends is unchanged.
 - **17 November 2026 (1.2):** What Prompt mode sends is unchanged. The rewriter is now told to use the
   screenshot and any notes only to name what "this" points at and to spell a name. This page now says
   that the eval scripts in the repo call OpenAI (`gpt-6-luna`) for their judges whatever provider you

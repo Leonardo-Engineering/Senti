@@ -4,6 +4,26 @@ All notable changes to Senti. Dates are in US Eastern time.
 
 ## [Unreleased]
 
+### Changed
+
+- Prompt mode no longer adds notes on the destination model to the rewriter's instructions, and Senti
+  no longer reads Claude Code's session file or Codex's config by default (it read them only to pick
+  those notes). This is shipped for privacy and size, not as an improvement: leaving the notes out had
+  no measured effect either way on 60 tuning ideas (round r6, 2 samples each, `gpt-6-luna`, M3 Pro, 17
+  Nov 2026). Rewrites with an addition 0 against 1 of 120, said items lost 0 against 2 of 628, answers
+  per requirement 8 better, 3 worse, 49 tied (p 0.23), pairwise answers 11 better, 16 worse, 33 tied
+  (p 0.44). The 15 held-back ideas, the screenshot path and long dictations were not rerun without
+  them. Senti's instructions are 0.7 to 2.4 KB shorter. The notes stay in `prompts/models/` for 1
+  release, and `WF_TARGET_NOTES=1` in `config.local.sh` adds them back. The menu's "Written for" row
+  now says "any app" when the last prompt carried no notes.
+- If you set `WF_MODEL_KB` or wrote a family to `~/.cache/senti/target.pref`, add `WF_TARGET_NOTES=1`
+  to `~/.config/senti/config.local.sh`: both now do nothing unless the notes are on.
+- A digest of your Obsidian or Notion notes on a heavy turn is now introduced to the rewriter as
+  reference only: to name what the idea points at and to spell names, adding no task, fact or
+  requirement and never changing a value the idea states. Before, it said to trust the notes over
+  guesses, which contradicted the rule that context adds nothing. Its effect on a prompt with notes
+  present has not been measured.
+
 ## [1.2.0] 2026-11-17
 
 ### Changed

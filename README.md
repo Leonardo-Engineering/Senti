@@ -53,16 +53,16 @@ have typed if you had taken the time.
 - **It says what is undecided.** When the idea names no result or no target at all ("fix it
   somehow"), the rewriter is told to end with an `Open questions:` line that states what was not said,
   and not to guess. In the tests 8 of the 10 rewrites of vague ideas got one.
-- **It knows where you are.** Senti reads the name of the app in front and its window title. ChatGPT
-  resolves to the model ChatGPT runs and Codex to the model in Codex's own config; in a Claude Code
-  terminal Senti reads the model name from Claude Code's session file. All of this is local and costs
-  no extra API call. The notes for that model (`prompts/models/*.md`, a section per model, 20 in all,
-  written from each lab's own pages with the links and dates beside them) still reach the rewriter,
-  introduced as guidance to apply. In the tests the rules above won: an earlier revision added a scope
-  line that the notes recommend to 1 of 144 rewrites for coding agents (16 November 2026), and of 3 ideas tried
-  that day for Claude Code, ChatGPT and Codex (1 sample each, an earlier revision), 2 gave the same
-  text for all 3 and the third differed by 2 words. So expect much the same prompt whichever app is in
-  front. A weekly check keeps the notes current (see CONTRIBUTING.md).
+- **It writes the same way for every app.** Senti used to add notes on the destination model to the
+  rewriter's instructions. Leaving them out had no measured effect either way on 60 test ideas (round
+  r6, 17 November 2026, 2 samples each, `gpt-6-luna`, M3 Pro; the held-back ideas, the screenshot path
+  and long dictations were not rerun without them). They are off for privacy and size: Senti no longer
+  reads Claude Code's session file or Codex's config, and its instructions are 0.7 to 2.4 KB shorter.
+  The other numbers on this page were measured with the notes on. The notes (`prompts/models/*.md`, a
+  section per model, 20 in all, written from each lab's own pages) stay in the repo, and a weekly check
+  keeps them current (see CONTRIBUTING.md). `WF_TARGET_NOTES=1` in `config.local.sh` adds them back;
+  Senti then picks them from the app in front, its window title, Claude Code's session file and
+  Codex's config, all locally.
 - **It can see your screen.** With **Use a screenshot in Prompt** on (the default), Prompt mode also
   sends a downscaled screenshot. The rewriter is told to use it for 2 things only: to name what
   "this" or "here" points at, and to spell a name or file that is visible, and never to add a task.
@@ -268,7 +268,8 @@ A prompt rewrite with `gpt-6-luna` took 1.5 to 3.0 seconds without a screenshot 
 runs on 17 November 2026; version 1.1.1 on the same 20 ideas, run alternately: median 2.4). With a
 screenshot it took 1.5 to 2.9 seconds (median 2.0, 10 runs with a synthetic screenshot the same day;
 1.1.1: median 4.4). The new prompts are shorter: about 39 output tokens against about 62, with about
-2,200 input tokens against about 1,500. Almost all of the time is the AI model's own. The screenshot is now shrunk while you are still
+2,200 input tokens against about 1,500 (with the per-model notes on; without them Senti's
+instructions are 0.7 to 2.4 KB shorter). Almost all of the time is the AI model's own. The screenshot is now shrunk while you are still
 speaking, which took about 0.07 seconds off Senti's own work after you let go of the key.
 
 The speech model stays loaded so dictation starts fast. On the same Mac the speech server used about
@@ -287,11 +288,18 @@ You need:
 - about 0.6 GB of disk for the default speech model (574 MB), plus about 80 MB for the Homebrew
   packages themselves, not counting libraries they pull in (measured 13 November 2026).
 
-The installer does not check the macOS version. Senti was tested on macOS 27.0.1.
+The installer does not check the macOS version. Senti was tested on macOS 27.0.1, where the offline
+self-test of this version passed on 17 November 2026.
 
 ```bash
 git clone https://github.com/Leonardo-Engineering/Senti.git ~/code/senti
 cd ~/code/senti && ./install.sh
+```
+
+**Update.** Senti has no update check. To update, pull and run the installer again:
+
+```bash
+cd ~/code/senti && git pull && ./install.sh
 ```
 
 What `install.sh` does, in order:
@@ -482,8 +490,9 @@ hard" or "today let's work on"). There are 2 sources, Obsidian and Notion. Both 
 them on, and you can use either or both. No other turn sends anything from your notes. Since 17
 November 2026 the rewriting rules say to use reference context, notes included, for 2 things only: to
 name what "this" points at and to spell a name, and to add nothing you did not say. The digest itself
-is still introduced to the rewriter as your own notes, to be trusted over guesses, so it is told both
-things. What that does to a prompt when a note digest is present has not been measured yet.
+is introduced the same way: as reference only, to name what the idea points at and to spell names,
+adding no task, fact or requirement and never changing a value you said. What a note digest does to a
+prompt has not been measured on the current rules.
 
 **Obsidian.** Senti reads only the vault folders you list, so don't list one that holds notes about
 people. It picks the note for the project in the window title and sends its `## Senti` section if it
@@ -588,7 +597,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
                                           │
    prompt/command ─▶ senti-ai.sh ─▶ your provider (OpenAI, Anthropic or OpenRouter)
    context/prompt+screen ─▶ senti-vision.sh ─▶ senti-ai.sh (with a downscaled screenshot)
-   prompt mode also ─▶ senti-target.sh (which model you are pasting into)
+   prompt mode also ─▶ senti-target.sh (notes on the destination model, only with WF_TARGET_NOTES=1)
                    ├─▶ senti-session.sh (this window's recent turns, heavy turns only)
                    └─▶ senti-brain.sh  (your Obsidian note and Notion page for this project, if on)
 ```
@@ -597,7 +606,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 - `senti-dictate.sh`: record, stop, transcribe, clean, silence gate, dictionary.
 - `senti-ai.sh`: the one AI call, text and vision, for every provider. Prepends the operating layer.
 - `senti-key.sh`: stores, tests and reports keys (Keychain), and picks the provider and model.
-- `senti-target.sh` / `senti-session.sh` / `senti-brain.sh`: model guidance, per-window memory, notes.
+- `senti-target.sh` / `senti-session.sh` / `senti-brain.sh`: per-model notes (off by default), per-window memory, notes.
 - `senti-prompt.sh`: Prompt mode without a screenshot.
 - `senti-vision.sh`: Context, and Prompt with a screenshot.
 - `senti-command.sh`: transforms selected text.

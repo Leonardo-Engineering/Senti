@@ -257,7 +257,7 @@ cp "$SRC"/prompts/*.md "$SB/.config/senti/prompts/" 2>/dev/null
 cp "$SRC"/prompts/models/*.md "$SB/.config/senti/prompts/models/" 2>/dev/null
 cp "$SRC/eval/cases.txt" "$SB/.config/senti/eval/" 2>/dev/null
 export HOME="$SB"
-unset SENTI_KEYCHAIN SENTI_SECURITY SENTI_PROVIDER SENTI_MODEL SENTI_EFFORT SENTI_IN SENTI_SYS
+unset SENTI_KEYCHAIN SENTI_SECURITY SENTI_PROVIDER SENTI_MODEL SENTI_EFFORT SENTI_IN SENTI_SYS WF_TARGET_NOTES
 # A throwaway keychain (never the login keychain). Without `security`, the Keychain checks
 # are skipped and the file fallback is what gets tested.
 # SENTI_SELFTEST_NO_KEYCHAIN=1 simulates a Mac (or runner) without it.
@@ -669,12 +669,33 @@ for dep in senti-target.sh senti-session.sh senti-brain.sh prompt-craft.md; do
   /usr/bin/grep -q "$dep" "$CFG/senti-lib.sh" 2>/dev/null \
     || { bad "path parity: senti-lib.sh lost its $dep wiring"; PAR=1; }
 done
-[ "$PAR" = "0" ] && ok "both paths share one context lib carrying craft + brain + session + target"
+[ "$PAR" = "0" ] && ok "both paths share one context lib carrying craft + brain + session (+ target when WF_TARGET_NOTES=1)"
 LCTX="$(SENTI_SLABEL="senti — x — y" SENTI_SKEY="" SENTI_HINT="Claude" \
         bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-lib.sh"; senti_prompt_craft' 2>/dev/null)"
 case "$LCTX" in
   *"How to build the prompt"*) ok "shared craft emits ($(printf '%s' "$LCTX" | /usr/bin/grep -c '^--- ') sections, ${#LCTX} chars)" ;;
   *) bad "shared craft function emitted nothing" ;;
+esac
+# Per-model notes are off by default: no notes block, and senti-target.sh is not even run (so the
+# Claude Code session file is not read). WF_TARGET_NOTES=1 brings both back.
+case "$LCTX" in
+  *"Target-model guidance"*) bad "per-model notes reach the rewriter by default (WF_TARGET_NOTES should default to 0)" ;;
+  *) ok "per-model notes are off by default (no Target-model guidance block)" ;;
+esac
+printf '{"message":{"model":"claude-opus-5-5"}}\n' > "$SB/.claude/projects/-x-code-selftestproj/s.jsonl"
+NB="$(/usr/bin/grep -c 'target: ' "$WF_LOG" 2>/dev/null || true)"
+SENTI_SKEY="" SENTI_SLABEL="selftestproj — ⠐ x — claude" SENTI_HINT="Terminal" \
+  bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-lib.sh"; senti_prompt_craft' >/dev/null 2>&1
+NA="$(/usr/bin/grep -c 'target: ' "$WF_LOG" 2>/dev/null || true)"
+[ "${NA:-0}" = "${NB:-0}" ] && ok "with the notes off, Claude Code's session file is not read (senti-target.sh not run)" \
+                            || bad "senti-target.sh ran with WF_TARGET_NOTES off"
+LCTX1="$(WF_TARGET_NOTES=1 SENTI_SKEY="" SENTI_SLABEL="selftestproj — ⠐ x — claude" SENTI_HINT="Terminal" \
+        bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-lib.sh"; senti_prompt_craft' 2>/dev/null)"
+NC="$(/usr/bin/grep -c 'target: ' "$WF_LOG" 2>/dev/null || true)"
+case "$LCTX1" in
+  *"--- Target-model guidance"*) [ "${NC:-0}" -gt "${NA:-0}" ] && ok "WF_TARGET_NOTES=1 adds the notes for the model in front (claude-opus-5-5 resolved)" \
+                                                            || bad "WF_TARGET_NOTES=1 added notes but did not resolve the Claude Code model" ;;
+  *) bad "WF_TARGET_NOTES=1 did not add the per-model notes" ;;
 esac
 
 echo "── intent gating and memory honesty ──"
@@ -705,6 +726,12 @@ case "$PV" in *"Synthetic project"*never-sent*) bad "preview shows a section out
 HV="$(WF_BRAIN=1 WF_VAULT="$SBT/vault" WF_BRAIN_DIRS=Projects SENTI_SLABEL="selftestproj — ⠐ x — claude" SENTI_SKEY="" \
       bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-lib.sh"; senti_ctx_for_intent "think hard about it"' 2>/dev/null)"
 case "$HV" in *never-sent*) bad "a heavy turn carried a section outside ## Senti" ;; *"Synthetic project"*) ok "a heavy turn carries the ## Senti digest, fenced" ;; *) bad "heavy turn carried no vault digest" ;; esac
+# The digest header says reference only, never "trust it over guesses" (17 Nov 2026): the craft
+# lets context name what "this" points at and spell names, nothing more.
+case "$HV" in *"over guesses"*) bad "the vault digest header still says to trust the notes over guesses" ;;
+  *"own notes (reference only"*) ok "the vault digest header says reference only" ;; *) bad "the vault digest header lost its reference-only wording" ;; esac
+/usr/bin/grep -q 'over guesses' "$CFG/senti-brain.sh" && bad "senti-brain.sh still tells the rewriter to trust notes over guesses" \
+  || ok "no digest header in senti-brain.sh says over guesses"
 /usr/bin/grep -q "sent: vault 'selftestproj.md'" "$WF_LOG" && ok "a heavy turn logs sent: vault '<note>' N chars" || bad "no sent: vault line on a heavy turn"
 /usr/bin/grep -q "brain: prepared 'selftestproj.md'" "$WF_LOG" && ok "building the digest logs brain: prepared (not sent)" || bad "no brain: prepared line"
 # Symlinks out of the listed folders: a symlinked folder on a map entry's path, a note that
@@ -864,6 +891,8 @@ else
   /bin/rm -f "$WF_RUN"/ctx-*
   HT="$("${NENV[@]}" SENTI_SLABEL="nalpha — x — claude" SENTI_SKEY="" bash -c 'source "$HOME/.config/senti/config.sh"; source "$HOME/.config/senti/senti-lib.sh"; senti_ctx_for_intent "today let us work on the cafe"' 2>/dev/null)"
   case "$HT" in *"Notion page"*"senti-$NMARK"*"END_REFERENCE_CONTEXT"*) ok "a heavy turn carries the Notion digest inside a nonce fence" ;; *) bad "heavy turn Notion block: ${HT:0:80}" ;; esac
+  case "$HT" in *"over guesses"*) bad "the Notion digest header still says to trust the notes over guesses" ;;
+    *"Notion page (reference only"*) ok "the Notion digest header says reference only" ;; *) bad "the Notion digest header lost its reference-only wording" ;; esac
   /usr/bin/grep -q "sent: notion 'Notion page 11111111'" "$WF_LOG" && ok "a heavy turn logs sent: notion with the page id prefix, not the title" || bad "no sent: notion line"
   "${NENV[@]}" SENTI_SLABEL="nalpha — x — claude" SENTI_SKEY="" SENTI_AI_DRYRUN=1 SENTI_IN="think hard about the cafe" bash "$CFG/senti-prompt.sh" >/dev/null 2>&1
   /usr/bin/python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert any(p["source"]=="notion" and p.get("note")=="Notion page 11111111" and p["chars"]>0 for p in d["parts"])' "$WF_RUN/last-request.json" 2>/dev/null \

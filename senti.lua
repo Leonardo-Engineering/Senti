@@ -2478,7 +2478,7 @@ local function aiMenu()
     { title = "Senti writes with: " .. (a.text_model or "no model set") .. " on " .. label
               .. (a.pinned and ((a.source == "env") and " (pinned in the environment)" or " (pinned in config.local.sh)") or ""),
       disabled = true },
-    { title = "Written for: " .. (wf.writtenFor() or "detected from the app you prompt into"), disabled = true },
+    { title = "Written for: " .. (wf.writtenFor() or "any app (no model-specific notes in the last prompt)"), disabled = true },
     { title = "-" },
   }
   local provs = {}
@@ -3232,7 +3232,7 @@ h2 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
     if (a.text) { w.appendChild(el("span", "mono", a.text)); w.appendChild(document.createTextNode(" on " + (ap ? ap.label : a.provider))); }
     else w.textContent = ap ? ap.label : "Not set";
     if (ap && !ap.present) w.appendChild(document.createTextNode(ap.unknown ? ", key status unknown" : ", needs a key"));
-    document.getElementById("written").textContent = S.writtenFor || "Detected from the app you prompt into";
+    document.getElementById("written").textContent = S.writtenFor || "Any app (no model-specific notes in the last prompt)";
   }
 
   function renderAll() {

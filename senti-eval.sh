@@ -10,7 +10,7 @@
 # digest, the vault and session memory only fire with a real destination and opener.
 #
 # A label names a VARIANT. If eval/variants/<label>.env exists, its KEY=VALUE lines are
-# applied while that side generates (allowed keys only: WF_MODEL_KB, WF_KB_FALLBACK,
+# applied while that side generates (allowed keys only: WF_TARGET_NOTES, WF_MODEL_KB, WF_KB_FALLBACK,
 # WF_PROMPT_CRAFT, WF_OPERATING_PROMPT, WF_OPERATING_LAYER, SENTI_PROVIDER, SENTI_MODEL,
 # SENTI_EFFORT, WF_EFFORT, WF_TEXT_MODEL, WF_BRAIN_RETRIEVE, WF_BRAIN_RETRIEVE_MIN). Without a
 # file, a side runs with the current environment. The notes bridge itself (WF_BRAIN,
@@ -72,7 +72,7 @@ load_variant() {   # load_variant <label> → VARS holds the allowed KEY=VALUE p
     case "$line" in ''|\#*) continue ;; esac
     k="${line%%=*}"
     case "$k" in
-      WF_MODEL_KB|WF_KB_FALLBACK|WF_PROMPT_CRAFT|WF_OPERATING_PROMPT|WF_OPERATING_LAYER|SENTI_PROVIDER|SENTI_MODEL|SENTI_EFFORT|WF_EFFORT|WF_TEXT_MODEL|WF_BRAIN_RETRIEVE|WF_BRAIN_RETRIEVE_MIN)
+      WF_TARGET_NOTES|WF_MODEL_KB|WF_KB_FALLBACK|WF_PROMPT_CRAFT|WF_OPERATING_PROMPT|WF_OPERATING_LAYER|SENTI_PROVIDER|SENTI_MODEL|SENTI_EFFORT|WF_EFFORT|WF_TEXT_MODEL|WF_BRAIN_RETRIEVE|WF_BRAIN_RETRIEVE_MIN)
         VARS+=("$line") ;;
       *) echo "variant ${1}: ignored key '$k'" >&2 ;;
     esac
