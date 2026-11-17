@@ -108,7 +108,7 @@ def _pat(tok, exact=False, inflect=True):
     k = norm(tok) if exact else loose(tok)
     if not k:
         return None
-    left = r"(?<![A-Za-z0-9_])(?<!\d[.,])" if k[0].isdigit() else (r"(?<![^\W\d])" if k[0].isalpha() else r"(?<![^\W_])")
+    left = r"(?<!\d)(?<!\d[.,])" if k[0].isdigit() else (r"(?<![^\W\d])" if k[0].isalpha() else r"(?<![^\W_])")
     if k[-1].isdigit():
         # "50" is in "$50.00" and "5GB", not in "50.5", "50,000" or "v50x"; "6.9" is in "6.90%"
         right = (r"0*" if "." in k else r"(?:\.0+)?") + r"(?!\d)(?![.,]\d)"
@@ -172,10 +172,16 @@ def format_fails(c, text):
     if "<r>" in t or "</r>" in t: bad.append("sentinel")
     if "```" in t and "```" not in c["idea"]: bad.append("fence")
     pre = re.match(r"(?i)^(sure|certainly|of course|absolutely|okay|ok|here is|here's|here are|below is)\b", lines[0].strip().replace("’", "'"))
-    if pre and not re.search(r"\b" + re.escape(pre.group(1).lower()) + r"\b", c["idea"].lower().replace("’", "'")): bad.append("preamble")   # the speaker's own "okay" is not one
+    if pre:
+        # the speaker's own "okay" is not a preamble: the idea opens with it, or the rewrite's first 3 words are the speaker's,
+        # in a row; a line that announces the prompt ("Sure, here's the rewritten prompt:") is one whatever the speaker said
+        first, idea_w = words(lines[0])[:3], " " + " ".join(words(c["idea"])) + " "
+        own = idea_w.lstrip().startswith(pre.group(1).lower() + " ") or (len(first) >= 2 and (" " + " ".join(first) + " ") in idea_w)
+        if not own or re.search(r"(?i)\b(here(?:'s| is| are)|below is)\b", lines[0].replace("’", "'")): bad.append("preamble")
     if len(t) > 1 and t[0] in "\"“" and t[-1] in "\"”": bad.append("wrapped in quotes")
-    off = re.match(r"(?i)\s*(let me know if|hope this helps|feel free to)\b", lines[-1])      # the writer's own sign-off, not "let me know" inside the request
-    if off and off.group(1).lower() not in c["idea"].lower(): bad.append("closing offer")
+    last = re.split(r"(?<=[.!?])\s+", lines[-1].strip())[-1]                                  # the writer's own sign-off is the last sentence,
+    off = re.match(r"(?i)[\s\-—–*_>(]*(let me know if|hope (?:this|that) helps|feel free to)\b", last)   # not "please let me know" inside the request
+    if off and re.sub(r"\s+", " ", off.group(1).lower()) not in c["idea"].lower(): bad.append("closing offer")
     if re.search(r"(?im)^\s*(you are|you're|act as) (a|an|the|my)\b", t.replace("’", "'")) and not re.search(r"(?i)\b(you are|you're|act as|pretend)\b", c["idea"].replace("’", "'")): bad.append("role line")
     if re.search(r"(?m)^\s{0,3}#{1,6}\s+\S", t): bad.append("heading")
     if re.search(r"(?m)^\s*\*\*[^*\n]{1,40}\*\*:?\s*$|^\s*\*\*[^*\n]{1,40}:\*\*|^\s*\*\*[^*\n]{1,40}\*\*\s*:", t): bad.append("bold label")
@@ -910,7 +916,9 @@ def pairwise(a, b, cases, args):
     w = l = t = miss = 0
     for c in cases:
         vs = [pair_verdict(a, b, c, k) for k in range(1, args.samples + 1)]
-        UNREAD[(a, b)] = UNREAD.get((a, b), 0) + sum(1 for k, v in enumerate(vs, 1) if v is None and read(path("resp", a, c, k, "txt")) and read(path("resp", b, c, k, "txt")))
+        gone = sum(1 for k, v in enumerate(vs, 1) if v is None and read(path("resp", a, c, k, "txt")) and read(path("resp", b, c, k, "txt")))
+        u = UNREAD.setdefault((a, b), {})
+        u[c["id"]] = (gone, len(vs), sum(1 for v in vs if v is not None))                                              # keyed by case: a second call for the same pair overwrites, never adds
         vs = [v for v in vs if v is not None]
         if not vs:
             ha = any(read(path("resp", a, c, k, "txt")) for k in range(1, args.samples + 1))
@@ -942,9 +950,15 @@ def cmd_compare(args):
         w, l, t, d, p = p2[i]
         pwt = "%3d-%-3d-%-3d %6.3f %6.3f" % (pw[i][0], pw[i][1], pw[i][2], pw[i][4], hpw[i]) if pw[i][3] < len(cases) else "(not run)"
         print("%-16s | %3d-%-3d-%-3d  %+7.3f %6.3f %6.3f | %s" % (b, w, l, t, d, p, hp2[i], pwt))
-    unread = ["%s %d" % (b, UNREAD.get((new, b), 0)) for b in args.arms if UNREAD.get((new, b), 0)]
+    unread = []
+    for b in dict.fromkeys(args.arms):
+        u = UNREAD.get((new, b), {})
+        part = sum(1 for g, n, r in u.values() if g and r)
+        whole = sum(1 for g, n, r in u.values() if g and not r)
+        if (part or whole) and any(r for g, n, r in u.values()):                                    # no readable verdict at all = the comparison never ran
+            unread.append("%s %d decided on the other sample, %d left out" % (b, part, whole))
     if unread:
-        print("  pairwise samples whose verdict could not be read (the case is decided on its other sample): " + ", ".join(unread))
+        print("  cases with a pairwise verdict that could not be read: " + "; ".join(unread))
     if args.noise:
         a, b = args.noise.split(",")
         w, l, t, d, p = versus(a, b, cases, args)
@@ -1197,13 +1211,17 @@ def cmd_check(args):
     craft = os.path.join(REPO, "prompts", "prompt-craft.md")
     if os.path.exists(craft) and not args.cases_only:
         ideas = [" ".join(words(c["idea"])) for c in cases]
-        opener = r"(?i)\b(today,? let'?s work on|think hard(er)?( about)?)\b"      # Senti's own heavy-turn openers are not a case's words
-        ex = words(re.sub(opener, " | ", open(craft, encoding="utf-8").read()))          # one word stream: the file is hard-wrapped
+        opener = r"(?i)\b(?:today,? let'?s work on|think hard(?:er)?(?: about)?)\b"   # Senti's own heavy-turn openers are not a case's words
+        def grams(text, n):                                                        # word runs of length n; none spans an opener
+            out = set()
+            for seg in re.split(opener, text):
+                w = words(seg)
+                out.update(" ".join(w[i:i + n]) for i in range(0, len(w) - n + 1))
+            return out
+        craft_text = open(craft, encoding="utf-8").read()                          # the whole file as one stream: it is hard-wrapped
         for n_gram, where in ((6, cases), (4, [c for c in cases if c.get("split") == "holdout"])):
-            pool = [" ".join(words(re.sub(opener, " | ", c["idea"]))) for c in where]
-            hit = next((" ".join(ex[i:i + n_gram]) for i in range(0, len(ex) - n_gram + 1)
-                        if any(" ".join(ex[i:i + n_gram]) in idea for idea in pool)), None)
-            if hit:
+            case_grams = set().union(*[grams(c["idea"], n_gram) for c in where]) if where else set()
+            for hit in sorted(grams(craft_text, n_gram) & case_grams):
                 errs.append("prompt-craft.md: shares %d words in a row with %s (%r)" % (n_gram, "a held-back case" if n_gram == 4 else "a case", hit))
     if not args.cases_only:
         errs += craft_example_errors(craft)
