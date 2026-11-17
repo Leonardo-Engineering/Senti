@@ -1296,10 +1296,35 @@ if [ -f "$LUA_SRC" ]; then
 fi
 /usr/bin/grep -qF 'The spoken idea decides the topic' "$CFG/senti-vision.sh" \
   && ok "the vision prompt puts the spoken idea ahead of the screen" || bad "the vision prompt lets the screen decide the topic"
-# The Prompt mode eval's case file (repo only): well-formed, and every must-keep item really in its idea.
+# Prompt mode adds nothing the speaker did not say. On 16 Nov 2026 the craft's 3 worked examples each
+# invented content (a role, a legal argument, "top 3-5 trends", a kill switch), the rewriter copied
+# them, and 139 of 150 rewrites carried an addition. Pin the rule, the outlet for what is undecided,
+# and the two things a small model copies most readily: an example's role line and the framing line.
+CRAFT="$CFG/prompts/prompt-craft.md"
+if /usr/bin/grep -qF 'Add nothing the speaker did not say. A fabricated requirement is worse than a vague' "$CRAFT" \
+   && /usr/bin/grep -qF '"Open questions: <what was not said> is not stated."' "$CRAFT"; then
+  ok "the prompt craft carries the no-invention rule and the Open questions outlet"
+else bad "the prompt craft lost the no-invention rule or the Open questions outlet"; fi
+if /usr/bin/grep -qiE "^(PROMPT: *)?(you are|you['’]re|act as|as) (a|an|the|my) " "$CRAFT"; then bad "a craft example carries a role line (the rewriter copies its examples)"
+else ok "no craft example opens with a role line"; fi
+NOTDEST=""
+for f in senti-prompt.sh senti-vision.sh; do
+  # only lines that build the system text count: a sentence that survives in a comment proves nothing
+  SYSL="$(/usr/bin/grep -E '^[[:space:]]*(GEN_SYS|SYS)="' "$CFG/$f")"
+  case "$SYSL" in *'never answer the request or carry it out'*) ;; *) NOTDEST="$NOTDEST $f" ;; esac
+  /usr/bin/grep -v '^[[:space:]]*#' "$CFG/$f" | /usr/bin/grep -qiE 'prompt engineer|high-signal prompt|optimized prompt' && NOTDEST="$NOTDEST $f(framing)"
+done
+[ -z "$NOTDEST" ] && ok "both prompt paths frame the job as rewriting the speech, never answering it" \
+                  || bad "a prompt path lost the rewrite framing:$NOTDEST"
+case "$(/usr/bin/grep -E '^[[:space:]]*SYS="' "$CFG/senti-vision.sh")" in
+  *'The screenshot never adds a task'*) ok "the screenshot may name and spell things; it never adds a task" ;;
+  *) bad "the vision prompt lets the screenshot add tasks" ;;
+esac
+# The eval's case file (repo only): well-formed, every must-keep item really in its idea, and no worked
+# example of the craft is one of the cases (an example that is also a case would flatter the result).
 if [ "$CI" = 1 ] && [ -f "$SRC/tools/prompt-eval.py" ] && [ -f "$SRC/eval/cases2.jsonl" ]; then
-  PEC="$(cd "$SRC" && /usr/bin/python3 -B tools/prompt-eval.py check --cases-only 2>&1 | /usr/bin/tail -1)"
-  case "$PEC" in "ok "*) ok "eval cases are well-formed ($PEC)" ;; *) bad "tools/prompt-eval.py check: $PEC" ;; esac
+  PEC="$(cd "$SRC" && /usr/bin/python3 -B tools/prompt-eval.py check 2>&1 | /usr/bin/tail -1)"
+  case "$PEC" in "ok "*) ok "eval cases are well-formed and no craft example is a case ($PEC)" ;; *) bad "tools/prompt-eval.py check: $PEC" ;; esac
 fi
 SS="$CFG/senti-session.sh"
 # Session memory belongs to a project, not just a window id: tabs and projects share a window.

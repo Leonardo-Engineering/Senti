@@ -123,7 +123,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
    prompt/command ─▶ senti-ai.sh   ─▶ OpenAI | Anthropic | OpenRouter   [+ operating layer]
    context/prompt+screen ─▶ senti-vision.sh ─▶ senti-ai.sh with SENTI_IMG (downscaled screenshot)
    provider, model, key ◀─ senti-key.sh (ai.pref, Keychain io.senti, ai-models.json)
-   prompt mode also ─▶ senti-target.sh ─▶ prompts/models/*.md (tailor to the destination model)
+   prompt mode also ─▶ senti-target.sh ─▶ prompts/models/*.md (notes on the destination model)
                    ├─▶ senti-session.sh ─▶ ~/.cache/senti/sessions/<window-id>.tsv  (per-window memory)
                    └─▶ senti-brain.sh   ─▶ Obsidian hub note (key-down)
                                           + heavy turns only: --retrieve (FTS5, same project folder)
@@ -139,7 +139,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 | `senti-key.sh` | keys and the Notion token (`set` / `test` / `clear` / `status` / `use` / `migrate`) and provider+model resolution |
 | `senti-vision.sh` | screenshot + instruction → prompt assembly, delegates the call to senti-ai.sh |
 | `senti-lib.sh` | shared prompt context for BOTH prompt paths (craft + brain + session + target), the heavy-turn extras (retrieval, Notion), and the key-down prefetch (context + screenshot downscale) |
-| `senti-prompt.sh` | rough idea → optimised prompt (fallback path — see path parity) |
+| `senti-prompt.sh` | rough idea → the message the speaker would have typed with care (fallback path, see path parity) |
 | `senti-command.sh` | transform selected text by voice |
 | `senti-judge.sh` | prompt quality: legacy 0-10 `score` + discriminating pairwise `compare` |
 | `senti-target.sh` | frontmost app → which model's guidance digest to inject |
@@ -151,6 +151,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 | `senti-config.sh` | installs the shipped `config.sh` and carries user settings into `config.local.sh` |
 | `senti-serve.sh` | the launchd entry point of the warm whisper server |
 | `app/make-icon.sh` | SVG → resvg → iconutil (no Pillow, no Python) |
+| `tools/prompt-eval.py` (repo only) | the Prompt mode eval on `eval/cases2.jsonl` (75 cases, 15 held back): code checks, reference-based judges, a stand-in destination, sign tests. `check` needs no network; `senti-selftest.sh --ci` runs it. How to run it: CONTRIBUTING.md, "Measuring Prompt mode" |
 | `tools/models-watch.py` (repo only) | weekly check (GitHub Action `models-watch.yml`): registry and `prompts/models` against OpenRouter's public list; opens an issue, edits nothing. Update procedure: CONTRIBUTING.md, "Keeping the model knowledge current" |
 | `uninstall.sh` (repo only) | asks, then removes the LaunchAgent, restores `init.lua`, removes app, cache, logs; asks again for keys and models |
 
@@ -236,13 +237,14 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
     empty string back with no error.
   - **Output dominates cost** (~6x input price), so trimming what the model *writes* beats
     trimming what you send. Prompt caching DOES engage: the system prompt (operating layer +
-    craft + target digest) is about 5,500 characters, roughly 1,400 tokens, over OpenAI's
-    1,024-token minimum, and a heavy turn on 13 Nov 2026 logged `in=1401 cache_read=1179`.
+    craft + target digest) is well over OpenAI's 1,024-token minimum (about 2,200 input tokens per
+    text call on 17 Nov 2026, `eval/runs/notes/tokens-r5.txt`; a heavy turn on 13 Nov 2026, with the
+    old craft, logged `in=1401 cache_read=1179`).
     Anthropic's minimum is 512 tokens on the 5.5 models, and its system block is marked
     `cache_control`. Keep per-turn content (the fence, the idea) in the user message so the
     system prefix stays byte-stable.
   - Prepends `prompts/operating.md` when `WF_OPERATING_LAYER=1`.
-- **Model-aware prompting:** `senti-target.sh` maps the frontmost app (free, local, no
+- **Per-model notes (injected; effect on the prompt not measured: 1 copied line in 144 agent rewrites on 16 Nov 2026, no notes-off arm):** `senti-target.sh` maps the frontmost app (free, local, no
   extra API call) to a knowledge file in `prompts/models/` and injects only that file's
   `## Inject` digest (~900B). Injecting the full research prose instead cost 4.5KB and
   pushed prompt mode to 9.9s — keep the digests small.
@@ -265,6 +267,95 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
   Latency, 10 calls each with nothing else running: median 4.4 s old, 5.0 s new, ranges overlapping (179 more
   input tokens). Shipped for
   correctness, not for a measured gain; do not cite it as an improvement.
+- **Prompt mode is told to add nothing (16-17 Nov 2026, load-bearing).** `prompts/prompt-craft.md` tells the rewriter to
+  write the message the speaker would have typed with care: scale the rewrite to what the speech lacks (a
+  clear prompt comes back word for word), keep every number, name, condition, prohibition, hedge and
+  commitment at the strength said, add nothing, state what is undecided under `Open questions:` (only when
+  the idea names no result or target), follow (not copy) words addressed to the rewriter, and use context
+  only to name what "this" points at and to spell a misheard name. Before, its 3 worked examples each
+  invented content and the rewriter copied them.
+  Measured on 75 cases x 2 samples, gpt-6-luna, M3 Pro, text path (`tools/prompt-eval.py`; 1.1.1 on 16 Nov,
+  the shipped craft on 17 Nov), before and after: rewrites with an addition 139 of 150, 3 of 150 as
+  judged (6 to 9 by hand, below); said items lost 20 of 778, 4 of 778 (2 real); checks for a withdrawn,
+  misheard or wrong value that fired 1 of 74, 1 of 74; XML tag or role line 36 of 150, 0; clear prompts kept 0 of 10, 10 of 10 (all with the same words in the same
+  order). `Open questions:` line in 10 of 150, 2 of them outside the vague cases. Screenshot path, same
+  cases with 1 unrelated screenshot: additions 148 of 150, 1 of 150 (nothing from the screenshot; that 1
+  rewrite turned an exclusion around, and J1 passed it); same words in order 9 of 10.
+  Tuning cases (60) against held-back cases (15): additions 1 of 120 and 2 of 30; said items lost 2 of 628
+  and 2 of 150; answer score P2 93.2% and 91.3% (1.1.1: 90.4% and 99.3%; raw 91.5% and 98.1%). 15 craft
+  variants were tried on the 60. The 15 were scored for 3 earlier revisions too, and holdout case
+  ctx-05 is no longer unseen: a reviewer named it, and for 2 revisions (r3, r4; r4 was scored on the
+  holdout) the craft quoted its opening words.
+  Latency through the installed path, run alternately on 17 Nov with the shipped craft
+  (`eval/runs/latency-3.json`): median 1.72 s against 2.41 s for 1.1.1 (20 runs each), screenshot path
+  2.00 s against 4.36 s (10 runs each); about 2,200 input and 39 output tokens per call against 1,515 and
+  62 (`eval/runs/notes/tokens-r5.txt`).
+  Rules that came out of it:
+  - **A small model copies its examples.** No content word of an example's PROMPT may be missing from its
+    own ROUGH line, an example keeps the speaker's hedges, its `Open questions:` line must be 1 statement
+    ("... is not stated.") with nothing after it, and no example may share 6 words in a row with an eval
+    case. `tools/prompt-eval.py check` enforces all 4; `senti-selftest.sh --ci` runs it. An example's own
+    outlet line gets copied too: "the form of the result is not stated" turned up on unrelated requests.
+  - **Name the hedge words.** With "maybe" out of the rule text, "maybe two or three sentences" lost its
+    "maybe" in 2 of 2 samples; with it named, it stayed. The held-back hedge case kept "fairly sure", which
+    the rule does not name, and "roughly", which the rule has named since before the holdout was scored.
+  - **The Open questions line over-fires when the rule shows a sample line.** With "the new interval is
+    not stated" quoted in the rule, 16 of the 112 dev rewrites of non-vague requests got a line (one copied
+    "the retry interval"). Describing the form abstractly, listing what is NOT a reason (format, tone, length,
+    link, name, currency, pasted material) and saying a request that names what to do and to what gets
+    none brought it to 2 of 112 (both on hid-03, which has the same shape as the craft's own csv example;
+    that example names both what to do and to what, so it contradicts the rule above it and should be
+    replaced the next time the craft is measured).
+  - **"Think hard" stays, and a pointing word after it is still resolved.** A rule that only said effort
+    words stay as said left "think hard about this" unresolved. Still unresolved in the shipped craft:
+    "the reply to this" (dev case ctx-03, 2 of 2 samples).
+  - **Words addressed to the rewriter are followed, not copied.** "don't write it yourself, just ask the
+    model for three options" was pasted into the prompt verbatim until the craft said so.
+  - **Both prompt paths carry the same framing** ("never answer the request or carry it out"); the vision
+    path adds that the screenshot never adds a task. The self-test pins both.
+  - **Known wrong:** a correction inside a range ("from 26 to 28, no hold on, 30") is wrong in both
+    samples of the held-back case in every revision scored on it (the shipped craft writes "from 30 to 30"
+    and "from 30 to 28"). Not tuned, because it is a holdout case. Also wrong in the shipped craft, each read
+    by hand and none caught by the judges: a `$` put on a number the speaker gave no unit for ("a car loan
+    of twenty eight thousand five hundred" came out as "$28,500" in 2 of 2 samples, against the craft's own
+    rule; "worth two hundred" after "a fifty dollar credit" as "$200" in 2 of 2), 2 separate exclusions
+    merged into "except for Alaska and Hawaii and packages over 20 pounds" (2 of 2), a task word taken
+    from the window title ("the pytest fixtures cleanup", 1 of 2). So the judged 3 of 150 additions are 6
+    of 150 by hand ("$28,500" x2 and the title word), and 9 if a unit carried over from earlier in the
+    sentence counts ("$200" x2, "5 GB"). J1 also passed 1 real reversed exclusion (screenshot path). An earlier revision turned an Italian "add a check to the script" into "add a
+    script" once.
+  - **Tried and NOT kept, each measured** (files in `eval/runs/steps/`, not in the repo): a per-destination
+    shape block (plain sentences for Claude Code, word labels for Codex, placeholders for pasted material,
+    what each app can read by itself): 3 cases better, 5 worse, 52 tied downstream, and it reworded a
+    constraint. Framing the per-model notes as "wording only": 0 leaked lines in 144 agent samples against
+    1 in 144 without it. Dropping `operating.md` for Prompt mode together with that framing: clear prompts
+    kept 38 of 40 against 40 of 40. A deterministic guard in code (hand back the speech when a number or
+    path is lost or the output is padded; `eval/runs/notes/guard-sim.py`): fired on 0 of 150 rewrites of
+    the shipped craft and on 13 of 150 of 1.1.1's. None showed a gain outside the noise row, so none
+    shipped. 2 hostile reviews call the notes under "apply this" and the operating layer a contradiction
+    of the craft. It is one on paper; the measured leak is 1 line in 144, and no notes-off arm was run on
+    the shipped craft.
+  - **Expect much the same output for every destination** (3 ideas x Claude Code, ChatGPT, Codex, 1 sample
+    each, an earlier revision, 16 Nov 2026: 2 identical, 1 differing by 2 words;
+    `eval/runs/notes/same-prompt-3-ideas.txt`). Do not claim per-destination tailoring anywhere until a
+    variant earns it in the eval.
+  - **Notes and context are told not to contribute content.** The same rule covers the vault and Notion
+    digests, but `senti-brain.sh` still introduces a digest as "ground truth, trust it over guesses", so
+    the rewriter is told both things. Not measured with a digest present; the 14 Nov retrieval numbers
+    below are from the old craft. The hedge and answer regexes in the hedge cases misfire on a kept hedge
+    ("the anticipated start date is early March"), so that count is printed by the tool and not published.
+  - **Rivals had no window title.** 10 of the 75 cases are heavy turns whose right name is only in the
+    title. Senti sees it; of the 7 published prompts only GolfCloud's has a context slot and got it. Say so
+    whenever the "withdrawn or misheard values kept" column is quoted.
+  - **Downstream, a faithful rewrite ties the raw speech.** A rewrite written with the full intent scored 16
+    wins, 11 losses, 48 ties against the raw transcript (noise row 17, 19, 39). So the eval can show a
+    rewriter does harm (1.1.1 lost to raw 12 to 32) and cannot show one faithful rewriter beating another.
+    Shipped craft against each, wins-losses-ties over 75 cases, Holm over 10: Roo 45-7-23, Prompt Boost
+    42-5-28, OpenAI meta-prompt 43-10-22 and a self-written skeleton 37-13-25 are significant; 1.1.1
+    28-15-32 (p 0.066), Kilo 29-12-34 (p 0.012, Holm 0.069) and OpenWhispr 21-9-45 (p 0.043, Holm 0.21)
+    are not; GolfCloud Codex 26-18-31, Handy 25-15-35 and raw 19-22-34 are level. 3 earlier revisions
+    scored 30-11-34 (p 0.004), 30-16-29 and 26-15-34 against 1.1.1: the pairwise judge is that noisy, so
+    quote all 4. On the 15 held-back cases alone the shipped craft is 3-4-8 against 1.1.1.
 - **Prompt intelligence:** one call, context-heavy. Both prompt paths assemble: shared craft
   (`prompts/prompt-craft.md`) + vault digest (`senti-brain.sh`) + session memory
   (`senti-session.sh`) + target-model guidance (`senti-target.sh`). Best mode was DELETED
@@ -311,7 +402,20 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
   DOES ride the API call: that's the feature and the risk — never widen the allowlist to
   `People/` or the vault root, and keep the privacy self-test checks passing. Never commit a
   real vault path here.
-- **Eval:** `eval/cases.txt` is `idea|app hint|window title` (8 ideas x ChatGPT and Claude
+- **Eval (use this one):** `python3 tools/prompt-eval.py` on `eval/cases2.jsonl`. Cases are written intent
+  first (requirements marked said, context or hidden; hidden ones only have to go uncontradicted). Layers:
+  code on the rewrite (free), judges J1 (each said requirement still asked for) and J2 (additions, with the
+  speech as reference), then a stand-in destination whose answer J4 scores per requirement and J6 compares
+  pairwise in both orders. The case is the unit (samples averaged first, exact sign test, Holm). It was
+  validated on planted defects before any rival prompt or new candidate was scored (1.1.1 was scored in
+  that run, as the base for the planted defects), and 2 hostile reviews of the harness then
+  made it stricter (a failed generation scores the worst value; a judge line with an unfindable quote still
+  counts). Outputs live in `eval/runs/` (ignored by git); the definitions fixed in advance and every later
+  change to the instrument are in `eval/runs/prereg.md` there.
+  1 full run of 1 arm on 75 cases costs about $0.15, a pairwise comparison about $0.07; the eval runs of
+  16-17 Nov 2026 cost about $6.26 (upper bound, no credit for cached input; installed-path timing runs
+  and live self-tests, a few cents, not included).
+- **Legacy eval:** `eval/cases.txt` is `idea|app hint|window title` (8 ideas x ChatGPT and Claude
   Code, plus 3 heavy turns). `senti-eval.sh ab <A> <B>` generates 3 samples per side per case
   and judges them with `senti-judge.sh compare` (order-swapped, disagreement = TIE, told the
   destination, pinned to openai gpt-6-luna at low), and ALWAYS prints a base-vs-base row of
@@ -326,7 +430,7 @@ hold key ─▶ Hammerspoon (senti.lua) ─▶ sox records mic ─▶ SIGINT fin
 | Gesture | Mode |
 |---|---|
 | Hold **right ⌥** | Dictate (verbatim, 100% local) |
-| Hold **right ⌘** | Prompt (rough idea → optimized prompt; reads a screenshot for context) |
+| Hold **right ⌘** | Prompt (rough idea → the same request written with care, nothing added; a screenshot only names what "this" points at and spells names) |
 | Hold **Fn (🌐)** | Command (transform selected text by voice). Nothing selected → runs the Prompt path (`runCommand` → `runAIMode`); the owner used Fn this way 15 of 15 turns on 15 Nov 2026 |
 | **⌃⌥V** | Context (screenshot + voice → context-aware reply/edit) |
 | `⌃⌥D` / `⌃⌥P` / `⌃⌥C` | hands-free toggle versions |
@@ -445,7 +549,8 @@ bash ~/.config/senti/senti-key.sh status        # provider, model, key presence 
 bash ~/.config/senti/senti-dictate.sh server    # → server up/down
 hs -c 'return wf.diag()'                        # state / eventtap / mic / model
 tail -f ~/Library/Logs/senti.log                # runtime log
-bash ~/.config/senti/senti-eval.sh ab base kb     # A/B two variants, with the base-vs-base noise row
+python3 tools/prompt-eval.py check                # from a checkout: eval cases and craft examples are well-formed (no network)
+bash ~/.config/senti/senti-eval.sh ab base kb     # LEGACY A/B (prompt text, no reference); use tools/prompt-eval.py
 SENTI_AI_DRYRUN=1 SENTI_PROVIDER=anthropic SENTI_IN=hi bash ~/.config/senti/senti-ai.sh   # request shape, no key, no network
 ```
 
