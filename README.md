@@ -195,6 +195,17 @@ What this shows, and what it does not:
   Alaska and Hawaii, and not when the package is over twenty pounds" came out as "except for Alaska
   and Hawaii, and when the package is over 20 pounds", which turns the second exclusion around, and the
   judge that checks meaning passed it. Whether a relevant screen helps was not measured.
+- **Long dictation.** The 75 ideas are 8 to 50 words, so 15 more were written of 228 to 278 words each,
+  with digressions, self-corrections and withdrawn ideas (17 November 2026, 2 samples each, same
+  model). This version lost 4 of 444 said items as counted in code, and all 4 are honest rewordings
+  read by hand; 3 of its 30 rewrites dropped something the count does not cover, 1 of them a
+  prohibition ("don't include medical details"). It was judged to add something in 1 of 30 (4 of 30
+  when the same version was run again; 5 of 30 read by hand, all small: "apartment", a guessed
+  `waitUntil`). 1.1.1 lost 37 of 444 and added something in 29 of 30; this version lost fewer in 11
+  ideas and more in 1. Every withdrawn value and misheard name was handled; on the transcript itself 15
+  of the 16 checks for them fired. The answers were level: against the transcript 4 better, 6 worse, 5 tied, against
+  1.1.1 7, 3, 5, and the same version against itself 1, 6, 8. On long dictation it keeps what you said;
+  it does not get a better answer than pasting the transcript.
 
 ## Modes
 
