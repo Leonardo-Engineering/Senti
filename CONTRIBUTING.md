@@ -35,9 +35,10 @@ User settings live in `config.local.sh`, which nothing overwrites. If you change
    `bash ~/.config/senti/senti-selftest.sh`. With a key, its live checks call your AI provider (a
    fraction of a cent) and send a screenshot of your main display. Set `WF_SELFTEST_OFFLINE=1` to skip
    them.
-4. If you changed Prompt mode, measure it: `bash ~/.config/senti/senti-eval.sh ab <before> <after>`
-   runs the cases in `eval/cases.txt` for both variants and judges them pairwise, with a
-   before-against-before row that shows the noise. It calls your AI provider.
+4. If you changed Prompt mode (`prompts/prompt-craft.md`, `prompts/models/`, `senti-prompt.sh`,
+   `senti-vision.sh`, `senti-target.sh`, `senti-lib.sh`), measure it. See
+   [Measuring Prompt mode](#measuring-prompt-mode). It calls OpenAI and costs well under a dollar for
+   1 variant.
 
 ## Rules the code depends on
 
@@ -58,10 +59,107 @@ User settings live in `config.local.sh`, which nothing overwrites. If you change
 - **Paths may contain spaces.** Quote every path. Never hard-code a home folder; use `$HOME`, or
   `__HOME__` in the plist.
 
+## Measuring Prompt mode
+
+Prompt mode turns a spoken idea into the message you paste. `tools/prompt-eval.py` measures whether
+that message still says what you said, and whether it helps. It is in the repo only (not installed)
+and needs Python 3 and an OpenAI key in the Keychain: the judges, the stand-in destination and any
+rival prompt always run on OpenAI `gpt-6-luna`, whatever provider you use (the key file fallback is
+not read). It makes
+every model call through a frozen copy of `senti-ai.sh` in a throwaway HOME, so your key is read from
+the Keychain by `senti-key.sh` and never passes through the tool, a command line or a file.
+
+**The cases** are in `eval/cases2.jsonl`: 75 spoken ideas, 15 kinds (clear requests, prompts that are
+already good, vague one-liners, hidden preferences, prohibitions, conditions, self-corrections, spoken
+paths and numbers, misheard names, "this" and "that", lists, narrow changes, questions, hedges and
+commitments, Spanish and Italian), spread over Claude Code, the Claude app, ChatGPT, Codex and Gemini.
+Each case was written intent first: the full list of what the speaker wants, each item marked said,
+on screen, or hidden (wanted and never said), and then the transcript that carries only the said ones.
+60 cases are for tuning. The 15 whose id ends in `-05` are a holdout: score them, never tune on them.
+
+**What is measured**, cheapest first:
+
+1. Code on the rewrite, no model: do the numbers, paths, names, conditions and hedges of the idea
+   survive (`miss`); did a withdrawn or misheard value come back; does an already-good prompt keep
+   90% or more of its words in order and grow by at most 15% (`passthr`); does the shape fit the destination (`format`: no XML tags, headings,
+   role line, preamble, or a request to share a file with an agent that reads the repo).
+2. Judged items on the rewrite, with the speech as the reference: is each said requirement still
+   asked for (`covered`), and does the rewrite carry anything the speaker never said (`invent`).
+3. Downstream: a stand-in for the destination answers the rewrite (a plan for a coding agent, an
+   answer for a chat app), and each requirement is checked on that answer (`P2`). A hidden
+   requirement only has to go uncontradicted, so guessing right is never rewarded. `pair` compares 2 arms' answers head to head, in both orders, with a disagreement counted as a tie.
+
+**Arms.** `raw` is the idea unchanged. `oracle` is written with the full intent and is the ceiling.
+A Senti arm is a frozen copy of a checkout (`mkarm`). Run the same arm twice under 2 names for a
+noise row: a difference no larger than that row is not a result.
+
+```bash
+python3 tools/prompt-eval.py check                         # the case file is well-formed (no model call)
+python3 tools/prompt-eval.py setup                         # once: freeze the judge copy
+git worktree add /tmp/senti-main main
+python3 tools/prompt-eval.py mkarm base /tmp/senti-main    # before
+python3 tools/prompt-eval.py mkarm base2 /tmp/senti-main   # the same again: the noise row
+python3 tools/prompt-eval.py mkarm mine .                  # after
+for a in raw base base2 mine; do
+  python3 tools/prompt-eval.py gen $a && python3 tools/prompt-eval.py judge $a && python3 tools/prompt-eval.py down $a
+done
+python3 tools/prompt-eval.py report raw base base2 mine --why
+for b in base raw; do python3 tools/prompt-eval.py pair mine $b; done      # head to head on the answers
+python3 tools/prompt-eval.py pair base2 base                               # the noise row
+python3 tools/prompt-eval.py compare mine base raw --noise base2,base
+python3 tools/prompt-eval.py spend
+```
+
+`--split holdout` scores the holdout, `--split all` everything, `--cats hedge,lang` or `--ids` a part.
+
+To check that the eval still catches defects (after any change to a judge prompt or to the cases):
+generate `raw`, `base`, `base2` and `oracle` with `--split all`, then `plant --base base` builds the
+defects: generic requirements added to that arm's rewrites, and a deleted clause, a withdrawn value
+put back and a prohibition turned around from texts in the case file. Judge them (`judge p-drop
+--split all --only j1`, the same for `p-stale` and `p-flip`, and `--only j2` for `p-add1`, `p-add3`
+and `raw`), run `down --split all` on `raw`, `base`, `base2`, `oracle`, `p-drop` and `p-add3`, then
+`validate --base base --noise base2,base` prints what was caught.
+
+Outputs go to `eval/runs/` (ignored by git; `SENTI_EVAL_WORK` moves it). A rival prompt is an arm too: put its text in `eval/runs/rivals/` and name it in
+`eval/runs/rivals/arms.json` (`{"name": {"sys": "file.txt", "user": "file.user.txt", "placeholder":
+"${text}"}}`); other tools' prompt texts are not kept in this repo. The tool refuses a batch when the dollars logged so far in that folder,
+plus an estimate for the batch from the measured mean cost per call, would pass `SENTI_EVAL_CAP`
+(8.50 by default). Spend is counted with no credit for cached input, so it is an upper bound.
+
+**Rules that keep the result honest.**
+
+- The case is the unit. Samples are averaged within a case, then cases are compared with an exact
+  sign test. 2 samples of 75 cases are not 150 observations.
+- A failed generation scores the worst value on every measure of fidelity and on the answers. It
+  never drops out.
+- No line of `prompts/prompt-craft.md` may share 6 words in a row with a case (4 with a held-back
+  case), and no content word, number or sign of an example's PROMPT may be missing from its ROUGH
+  line; its `Open questions:` line must be 1 statement in the speaker's own words. `check` enforces all of these (and that an example keeps the speaker's hedges and
+  opens with no role line), and `bash senti-selftest.sh --ci` (so CI too) runs `check`.
+- Read the misses. `report --why` lists every lost item and every judged addition; a code miss can be
+  an honest rewording, and a judged addition can be a judge's mistake. Report the raw rate and the
+  rate after reading, side by side.
+- The rewriter, the stand-in destination and the judges are the same small model. The judges never
+  see which arm wrote a text, and every judged item has a reference.
+
+**What it cannot tell you.** Agent destinations are scored on a plan, not on a real agent run. The
+ideas are written in transcript style, not recorded. There is no second judge from another lab. The
+text path is the one measured in full; the screenshot path runs through `<arm>+shot` with 1 fixed,
+unrelated screenshot (set `SENTI_EVAL_SHOT` to your own PNG), which shows whether the screen brings invention back and nothing about whether
+a relevant screen helps. A rewrite that is faithful scores close to the raw idea downstream, so this
+eval can show that a rewriter does harm and can rarely show that one faithful rewriter beats another.
+
+The older harness (`senti-eval.sh` and `senti-judge.sh`, on `eval/cases.txt`) judges the prompt text
+with no reference. On 15 Nov 2026 it could not tell 2 knowledge bases apart (20 wins, 18 losses, 19
+ties against a noise row of 20, 19, 18). It is kept for its history file and is not the way to measure
+a change to Prompt mode.
+
 ## Keeping the model knowledge current
 
-Senti writes a prompt for the model you paste into, so it has to know how each model wants to be
-prompted. That knowledge is plain text in `prompts/models/`, and the list of models Senti can call is
+Senti gives its rewriter notes on how each destination model reads a prompt. Since 16 November 2026
+the eval has seen little sign of them in the prompt (see
+[Measuring Prompt mode](#measuring-prompt-mode); a version without the notes was not measured), and
+they are kept current so that a later variant can use them. The notes are plain text in `prompts/models/`, and the list of models Senti can call is
 `ai-models.json`. Both go stale when a lab ships a model.
 
 - **The watch.** `python3 tools/models-watch.py` compares the two with OpenRouter's public model list
@@ -78,8 +176,8 @@ prompted. That knowledge is plain text in `prompts/models/`, and the list of mod
   the only family text sent with every prompt.
 - **Prices and new models.** Change `ai-models.json` (and its `checked` date), then the tables in
   `README.md`. Prices for `openai` and `anthropic` rows come from the lab's own pricing page.
-- **Prove it.** Run the offline self-test, and for any change to prompting text run
-  `bash ~/.config/senti/senti-eval.sh ab base <variant>` and compare with its base-against-base row.
+- **Prove it.** Run the offline self-test, and for any change to prompting text run the eval in
+  [Measuring Prompt mode](#measuring-prompt-mode) and compare with its noise row.
 
 ## Keep keys and personal details out
 

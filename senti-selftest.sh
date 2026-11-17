@@ -1296,6 +1296,11 @@ if [ -f "$LUA_SRC" ]; then
 fi
 /usr/bin/grep -qF 'The spoken idea decides the topic' "$CFG/senti-vision.sh" \
   && ok "the vision prompt puts the spoken idea ahead of the screen" || bad "the vision prompt lets the screen decide the topic"
+# The Prompt mode eval's case file (repo only): well-formed, and every must-keep item really in its idea.
+if [ "$CI" = 1 ] && [ -f "$SRC/tools/prompt-eval.py" ] && [ -f "$SRC/eval/cases2.jsonl" ]; then
+  PEC="$(cd "$SRC" && /usr/bin/python3 -B tools/prompt-eval.py check --cases-only 2>&1 | /usr/bin/tail -1)"
+  case "$PEC" in "ok "*) ok "eval cases are well-formed ($PEC)" ;; *) bad "tools/prompt-eval.py check: $PEC" ;; esac
+fi
 SS="$CFG/senti-session.sh"
 # Session memory belongs to a project, not just a window id: tabs and projects share a window.
 SENTI_IN="alpha-turn-7Q" SENTI_SKEY="900007" SENTI_SLABEL="projA — t — claude" bash "$SS" note "" "" prompt >/dev/null 2>&1
