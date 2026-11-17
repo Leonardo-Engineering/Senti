@@ -76,6 +76,9 @@ commitments, Spanish and Italian), spread over Claude Code, the Claude app, Chat
 Each case was written intent first: the full list of what the speaker wants, each item marked said,
 on screen, or hidden (wanted and never said), and then the transcript that carries only the said ones.
 60 cases are for tuning. The 15 whose id ends in `-05` are a holdout: score them, never tune on them.
+`eval/cases-long.jsonl` holds 15 more, kind `long`: rambling dictation of 228 to 278 words with
+digressions, self-corrections and withdrawn ideas (`long-05`, `-10`, `-15` held back). Run them with
+`SENTI_EVAL_CASES=eval/cases-long.jsonl` in front of any command below; they are not in the default run.
 
 **What is measured**, cheapest first:
 
@@ -95,6 +98,7 @@ noise row: a difference no larger than that row is not a result.
 
 ```bash
 python3 tools/prompt-eval.py check                         # the case file is well-formed (no model call)
+SENTI_EVAL_CASES=eval/cases2.jsonl:eval/cases-long.jsonl python3 tools/prompt-eval.py check   # both files
 python3 tools/prompt-eval.py setup                         # once: freeze the judge copy
 git worktree add /tmp/senti-main main
 python3 tools/prompt-eval.py mkarm base /tmp/senti-main    # before

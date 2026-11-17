@@ -1048,7 +1048,7 @@ def cmd_validate(args):
 # ── check: the case file is well-formed (no model call) ──────────────────────────────────────────
 CCATS = {"clear": "clear", "pass": "passthrough", "vague": "vague", "hid": "hidden_pref", "cons": "constraint",
         "cond": "conditional", "corr": "correction", "tok": "tokens", "mis": "misheard", "ctx": "context_ref",
-        "list": "list", "scope": "scope", "ask": "question", "hedge": "hedge", "lang": "lang"}
+        "list": "list", "scope": "scope", "ask": "question", "hedge": "hedge", "lang": "lang", "long": "long"}
 CDEST = {"claude_code": "Terminal", "codex": "Codex", "claude_app": "Claude", "chatgpt": "ChatGPT", "gemini": "Google Chrome"}
 CC = {"claude-fable-5-2", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"}
 KINDS = {"number", "path", "identifier", "entity", "condition", "hedge", "term"}
@@ -1084,7 +1084,7 @@ def check_case(c, errs):
         e("bad id"); return
     if CCATS[m.group(1)] != c["category"]:
         e("category does not match id prefix")
-    want_split = "holdout" if m.group(2) == "05" else "dev"
+    want_split = "holdout" if m.group(2) in (("05", "10", "15") if m.group(1) == "long" else ("05",)) else "dev"   # long: 15 cases, 3 held back
     if c["split"] != want_split:
         e("split should be " + want_split)
     if c["lang"] not in ("en", "es", "it"):

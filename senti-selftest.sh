@@ -1331,7 +1331,7 @@ esac
 # The eval's case file (repo only): well-formed, every must-keep item really in its idea, and no worked
 # example of the craft is one of the cases (an example that is also a case would flatter the result).
 if [ "$CI" = 1 ] && [ -f "$SRC/tools/prompt-eval.py" ] && [ -f "$SRC/eval/cases2.jsonl" ]; then
-  PEC="$(cd "$SRC" && /usr/bin/python3 -B tools/prompt-eval.py check 2>&1 | /usr/bin/tail -1)"
+  PEC="$(cd "$SRC" && SENTI_EVAL_CASES="eval/cases2.jsonl:eval/cases-long.jsonl" /usr/bin/python3 -B tools/prompt-eval.py check 2>&1 | /usr/bin/tail -1)"
   case "$PEC" in "ok "*) ok "eval cases are well-formed and no craft example is a case ($PEC)" ;; *) bad "tools/prompt-eval.py check: $PEC" ;; esac
 fi
 SS="$CFG/senti-session.sh"
